@@ -42,6 +42,7 @@ Backend RESTful API per l'applicazione **ApexFlow**, sviluppato con **Spring Boo
 - **Database:** H2 (In-Memory per dev) / PostgreSQL (Ready)
 - **ORM:** Hibernate / Spring Data JPA
 - **Build Tool:** Maven
+- **Containerizzazione:** [Docker](https://www.docker.com/)
 
 ---
 
@@ -54,6 +55,25 @@ src/main/java/com/apexflow/
 ├── model/          # JPA Entities (Domain Layer)
 └── repository/     # Data Access Layer (Interfaces)
 ```
+
+---
+
+## ☁️ Cloud Deployment (Render.com)
+
+L'applicazione è configurata per il deploy automatico su **Render** tramite il file `Dockerfile`.
+
+- **Live API URL:** [https://backend-tesi.onrender.com/](https://backend-tesi.onrender.com/)
+- **Database:** PostgreSQL gestito su Render.
+- **CI/CD:** Ogni push sul branch `main` attiva automaticamente una nuova build e il deploy del container.
+
+### Variabili d'Ambiente richieste
+
+Per il corretto funzionamento in cloud, le seguenti variabili devono essere configurate nella dashboard di Render:
+
+- `SPRING_DATASOURCE_URL`: URL JDBC del database PostgreSQL.
+- `SPRING_DATASOURCE_USERNAME`: Username del database.
+- `SPRING_DATASOURCE_PASSWORD`: Password del database.
+- `PORT`: Porta interna dell'applicazione (default `8080`).
 
 ---
 
@@ -74,9 +94,9 @@ src/main/java/com/apexflow/
     ./mvnw spring-boot:run
     ```
 4.  **Verifica Endpoints:**
-    - Customers: `GET http://localhost:8080/api/customers`
+    - Root (Welcome): `GET http://localhost:8080/`
     - Products: `GET http://localhost:8080/api/products`
-    - Orders: `GET http://localhost:8080/api/orders`
+    - Customers: `GET http://localhost:8080/api/customers`
 
 ---
 
