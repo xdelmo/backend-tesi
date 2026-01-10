@@ -2,6 +2,8 @@ package com.apexflow.config;
 
 import com.apexflow.model.Customer;
 import com.apexflow.model.User;
+import com.apexflow.model.CustomerStats;
+import com.apexflow.repository.CustomerStatsRepository;
 import com.apexflow.repository.CustomerRepository;
 import com.apexflow.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -12,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class DataInitializer {
 
     @Bean // Questo metodo verrà eseguito all'avvio
-    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository) {
+    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository, CustomerStatsRepository customerStatsRepository) {
         return args -> {
             // Seeding Customers
             if (customerRepository.count() == 0) {
@@ -51,6 +53,29 @@ public class DataInitializer {
                 
                 userRepository.save(admin);
                 System.out.println("--- Users seeded! ---");
+            }
+
+            // Seeding CustomerStats
+            if (customerStatsRepository.count() == 0) {
+                System.out.println("--- Seeding CustomerStats... ---");
+                
+                CustomerStats cs1 = new CustomerStats();
+                cs1.setId("cs-1767988302598");
+                cs1.setCustomerId("I9j0K1l2M3n4O5p6");
+                cs1.setTotalRevenue(499.5);
+                cs1.setTotalOrders(1);
+                cs1.setLastOrderDate(java.time.LocalDateTime.parse("2026-01-09T19:51:42.598"));
+                customerStatsRepository.save(cs1);
+
+                CustomerStats cs2 = new CustomerStats();
+                cs2.setId("cs-1767988641922");
+                cs2.setCustomerId("Q7r8S9t0U1v2W3x4");
+                cs2.setTotalRevenue(1198.8);
+                cs2.setTotalOrders(1);
+                cs2.setLastOrderDate(java.time.LocalDateTime.parse("2026-01-09T19:57:21.922"));
+                customerStatsRepository.save(cs2);
+                
+                System.out.println("--- CustomerStats seeded! ---");
             }
         };
     }
