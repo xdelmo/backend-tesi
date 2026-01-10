@@ -4,19 +4,24 @@ import com.apexflow.model.Customer;
 import com.apexflow.model.User;
 import com.apexflow.model.CustomerStats;
 import com.apexflow.model.Product;
+import com.apexflow.model.Order;
+import com.apexflow.model.OrderItem;
 import com.apexflow.repository.CustomerStatsRepository;
 import com.apexflow.repository.CustomerRepository;
 import com.apexflow.repository.ProductRepository;
+import com.apexflow.repository.OrderRepository;
 import com.apexflow.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
+
 @Configuration // Dice a Spring che questa è una classe di configurazione
 public class DataInitializer {
 
     @Bean // Questo metodo verrà eseguito all'avvio
-    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository, CustomerStatsRepository customerStatsRepository, ProductRepository productRepository) {
+    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository, CustomerStatsRepository customerStatsRepository, ProductRepository productRepository, OrderRepository orderRepository) {
         return args -> {
             // Seeding Customers
             if (customerRepository.count() == 0) {
@@ -145,6 +150,57 @@ public class DataInitializer {
                 productRepository.save(p6);
 
                 System.out.println("--- Products seeded! ---");
+            }
+
+            // Seeding Orders
+            if (orderRepository.count() == 0) {
+                System.out.println("--- Seeding Orders... ---");
+
+                Order o1 = new Order();
+                o1.setId("ORD-719");
+                o1.setCustomerId("I9j0K1l2M3n4O5p6");
+                o1.setDate(java.time.LocalDateTime.parse("2026-01-09T19:51:34.467"));
+                o1.setStatus("Pagato");
+                o1.setType("Abbonamento");
+                o1.setSubtotal(500.0);
+                o1.setTax(49.5);
+                o1.setDiscountAmount(50.0);
+                o1.setTotal(499.5);
+
+                OrderItem oi1 = new OrderItem();
+                oi1.setProductId("PROD-CL-001");
+                oi1.setName("Archiviazione Enterprise");
+                oi1.setPrice(500.0);
+                oi1.setQuantity(1);
+                oi1.setCategory("Cloud");
+                oi1.setOrder(o1);
+
+                o1.setItems(List.of(oi1));
+                orderRepository.save(o1);
+
+                Order o2 = new Order();
+                o2.setId("ORD-4736");
+                o2.setCustomerId("Q7r8S9t0U1v2W3x4");
+                o2.setDate(java.time.LocalDateTime.parse("2026-01-09T19:57:10.184"));
+                o2.setStatus("Pagato");
+                o2.setType("Abbonamento");
+                o2.setSubtotal(1200.0);
+                o2.setTax(118.8);
+                o2.setDiscountAmount(120.0);
+                o2.setTotal(1198.8);
+
+                OrderItem oi2 = new OrderItem();
+                oi2.setProductId("PROD-CL-002");
+                oi2.setName("Calcolo Serverless");
+                oi2.setPrice(1200.0);
+                oi2.setQuantity(1);
+                oi2.setCategory("Cloud");
+                oi2.setOrder(o2);
+
+                o2.setItems(List.of(oi2));
+                orderRepository.save(o2);
+
+                System.out.println("--- Orders seeded! ---");
             }
         };
     }
