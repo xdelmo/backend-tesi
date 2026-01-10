@@ -20,4 +20,9 @@ public class CustomerController {
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll();
     }
+
+    @GetMapping("/{id}")
+    public Customer getCustomerById(@PathVariable String id) {
+        return customerRepository.findById(id).orElse(null);
+    }
 }
