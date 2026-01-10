@@ -25,4 +25,22 @@ public class CustomerController {
     public Customer getCustomerById(@PathVariable String id) {
         return customerRepository.findById(id).orElse(null);
     }
+
+    @PostMapping
+    public Customer createCustomer(@RequestBody Customer customer) {
+        return customerRepository.save(customer);
+    }
+
+    @PatchMapping("/{id}")
+    public Customer updateCustomer(@PathVariable String id, @RequestBody Customer customerDetails) {
+        return customerRepository.findById(id).map(customer -> {
+            if (customerDetails.getName() != null) customer.setName(customerDetails.getName());
+            if (customerDetails.getEmail() != null) customer.setEmail(customerDetails.getEmail());
+            if (customerDetails.getCompany() != null) customer.setCompany(customerDetails.getCompany());
+            if (customerDetails.getStatus() != null) customer.setStatus(customerDetails.getStatus());
+            if (customerDetails.getIndustry() != null) customer.setIndustry(customerDetails.getIndustry());
+            if (customerDetails.getPlan() != null) customer.setPlan(customerDetails.getPlan());
+            return customerRepository.save(customer);
+        }).orElse(null);
+    }
 }
