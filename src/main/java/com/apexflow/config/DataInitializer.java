@@ -1,7 +1,9 @@
 package com.apexflow.config;
 
 import com.apexflow.model.Customer;
+import com.apexflow.model.User;
 import com.apexflow.repository.CustomerRepository;
+import com.apexflow.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,13 +12,11 @@ import org.springframework.context.annotation.Configuration;
 public class DataInitializer {
 
     @Bean // Questo metodo verrà eseguito all'avvio
-    CommandLineRunner initDatabase(CustomerRepository repository) {
+    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository) {
         return args -> {
-            // Controlliamo se il database è già popolato per non duplicare i dati
-            if (repository.count() == 0) {
-                System.out.println("--- Popolamento database in corso... ---");
-
-                // Creiamo il primo cliente dal tuo db.json
+            // Seeding Customers
+            if (customerRepository.count() == 0) {
+                System.out.println("--- Seeding Customers... ---");
                 Customer c1 = new Customer();
                 c1.setId("A1b2C3d4E5f6G7h8");
                 c1.setName("Mario Rossi");
@@ -25,11 +25,8 @@ public class DataInitializer {
                 c1.setStatus("Attivo");
                 c1.setIndustry("Software");
                 c1.setPlan("Enterprise");
+                customerRepository.save(c1);
 
-                // Salviamo il cliente nel database
-                repository.save(c1);
-
-                // Aggiungiamone un secondo per prova
                 Customer c2 = new Customer();
                 c2.setId("I9j0K1l2M3n4O5p6");
                 c2.setName("Luca Bianchi");
@@ -38,12 +35,22 @@ public class DataInitializer {
                 c2.setStatus("In Attesa");
                 c2.setIndustry("Software");
                 c2.setPlan("Professional");
+                customerRepository.save(c2);
+                System.out.println("--- Customers seeded! ---");
+            }
 
-                repository.save(c2);
-
-                System.out.println("--- Database popolato con successo! ---");
-            } else {
-                System.out.println("--- Il database contiene già dei dati, salto il popolamento. ---");
+            // Seeding Users
+            if (userRepository.count() == 0) {
+                System.out.println("--- Seeding Users... ---");
+                User admin = new User();
+                admin.setEmail("admin@demo.com");
+                admin.setPassword("password"); // In production use BCrypt!
+                admin.setName("Utente Admin");
+                admin.setRole("admin");
+                admin.setAvatar("https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png");
+                
+                userRepository.save(admin);
+                System.out.println("--- Users seeded! ---");
             }
         };
     }
