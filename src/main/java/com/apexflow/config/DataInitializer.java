@@ -3,8 +3,10 @@ package com.apexflow.config;
 import com.apexflow.model.Customer;
 import com.apexflow.model.User;
 import com.apexflow.model.CustomerStats;
+import com.apexflow.model.Product;
 import com.apexflow.repository.CustomerStatsRepository;
 import com.apexflow.repository.CustomerRepository;
+import com.apexflow.repository.ProductRepository;
 import com.apexflow.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 public class DataInitializer {
 
     @Bean // Questo metodo verrà eseguito all'avvio
-    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository, CustomerStatsRepository customerStatsRepository) {
+    CommandLineRunner initDatabase(CustomerRepository customerRepository, UserRepository userRepository, CustomerStatsRepository customerStatsRepository, ProductRepository productRepository) {
         return args -> {
             // Seeding Customers
             if (customerRepository.count() == 0) {
@@ -76,6 +78,73 @@ public class DataInitializer {
                 customerStatsRepository.save(cs2);
                 
                 System.out.println("--- CustomerStats seeded! ---");
+            }
+
+            // Seeding Products
+            if (productRepository.count() == 0) {
+                System.out.println("--- Seeding Products... ---");
+
+                Product p1 = new Product();
+                p1.setId("PROD-CL-001");
+                p1.setName("Archiviazione Enterprise");
+                p1.setDescription("Storage cloud scalabile ad alta disponibilità");
+                p1.setCategory("Cloud");
+                p1.setPrice(500.0);
+                p1.setDuration("Mensile");
+                p1.setStatus("Attivo");
+                productRepository.save(p1);
+
+                Product p2 = new Product();
+                p2.setId("PROD-CL-002");
+                p2.setName("Calcolo Serverless");
+                p2.setDescription("Risorse di calcolo on-demand");
+                p2.setCategory("Cloud");
+                p2.setPrice(1200.0);
+                p2.setDuration("Mensile");
+                p2.setStatus("Attivo");
+                productRepository.save(p2);
+
+                Product p3 = new Product();
+                p3.setId("PROD-AN-001");
+                p3.setName("Dashboard Predittiva");
+                p3.setDescription("Analisi avanzata con previsioni AI");
+                p3.setCategory("Analytics");
+                p3.setPrice(800.0);
+                p3.setDuration("Annuale");
+                p3.setStatus("Attivo");
+                productRepository.save(p3);
+
+                Product p4 = new Product();
+                p4.setId("PROD-AN-002");
+                p4.setName("Connettore Data Warehouse");
+                p4.setDescription("Strumento di integrazione per i principali data warehouse");
+                p4.setCategory("Analytics");
+                p4.setPrice(300.0);
+                p4.setDuration("Una Tantum");
+                p4.setStatus("Attivo");
+                productRepository.save(p4);
+
+                Product p5 = new Product();
+                p5.setId("PROD-AI-001");
+                p5.setName("Analisi del Sentiment NLP");
+                p5.setDescription("API di analisi del testo basata su AI");
+                p5.setCategory("AI");
+                p5.setPrice(1500.0);
+                p5.setDuration("Mensile");
+                p5.setStatus("Inattivo");
+                productRepository.save(p5);
+
+                Product p6 = new Product();
+                p6.setId("PROD-AI-002");
+                p6.setName("Riconoscimento Immagini API");
+                p6.setDescription("Computer vision per la classificazione delle immagini");
+                p6.setCategory("AI");
+                p6.setPrice(2000.0);
+                p6.setDuration("Mensile");
+                p6.setStatus("Attivo");
+                productRepository.save(p6);
+
+                System.out.println("--- Products seeded! ---");
             }
         };
     }
