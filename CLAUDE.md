@@ -6,8 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ApexFlow backend: Spring Boot REST API (Java 21, Maven) serving an Angular frontend (customers, products, orders, users, customer stats). Code comments and seed data are in Italian.
 
-Note: the README says Spring Boot 3.4.1 and H2 for dev; `pom.xml` is actually Spring Boot **4.0.1** and only the PostgreSQL driver is present (no H2). Trust `pom.xml`.
-
 ## Commands
 
 ```bash

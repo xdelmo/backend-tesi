@@ -1,6 +1,6 @@
 # 🔹 ApexFlow Backend - Spring Boot API
 
-Backend RESTful API per l'applicazione **ApexFlow**, sviluppato con **Spring Boot 3** e **Java 21**. Fornisce servizi per la gestione di clienti, prodotti, ordini e statistiche, supportando l'architettura a microservizi e la scalabilità enterprise.
+Backend RESTful API per l'applicazione **ApexFlow**, sviluppato con **Spring Boot 4** e **Java 21**. Fornisce servizi per la gestione di clienti, prodotti, ordini e statistiche, supportando l'architettura a microservizi e la scalabilità enterprise.
 
 ## 🚀 Funzionalità Principali
 
@@ -27,7 +27,7 @@ Backend RESTful API per l'applicazione **ApexFlow**, sviluppato con **Spring Boo
 
 ### 🛠 Architettura Tecnica
 
-- **Spring Boot 3:** Framework core per rapid application development.
+- **Spring Boot 4:** Framework core per rapid application development.
 - **Spring Data JPA:** Layer di persistenza astratto su **Hibernate**.
 - **PostgreSQL Driver:** Configurazione pronta per database relazionali enterprise.
 - **Lombok:** Riduzione boilerplate code per Entity e DTO.
@@ -38,8 +38,8 @@ Backend RESTful API per l'applicazione **ApexFlow**, sviluppato con **Spring Boo
 ## 🛠 Tech Stack
 
 - **Linguaggio:** [Java 21](https://www.java.com/)
-- **Framework:** [Spring Boot 3.4.1](https://spring.io/projects/spring-boot)
-- **Database:** H2 (In-Memory per dev) / PostgreSQL (Ready)
+- **Framework:** [Spring Boot 4.0.1](https://spring.io/projects/spring-boot)
+- **Database:** PostgreSQL (locale e cloud)
 - **ORM:** Hibernate / Spring Data JPA
 - **Build Tool:** Maven
 - **Containerizzazione:** [Docker](https://www.docker.com/)
@@ -84,7 +84,7 @@ Per il corretto funzionamento in cloud, le seguenti variabili devono essere conf
     git clone https://github.com/xdelmo/backend-tesi.git
     ```
 2.  **Compila il progetto:**
-    Assicurati di avere JDK 21 installato.
+    Assicurati di avere JDK 21 installato e un PostgreSQL attivo su `localhost:5432` con database `apexflow_db` (credenziali di default `postgres` / `admin`, sovrascrivibili con le variabili `SPRING_DATASOURCE_*`).
     ```bash
     ./mvnw clean install
     ```
