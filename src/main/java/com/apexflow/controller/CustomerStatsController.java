@@ -1,31 +1,51 @@
 package com.apexflow.controller;
 
 import com.apexflow.model.CustomerStats;
-import com.apexflow.repository.CustomerStatsRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.apexflow.service.CustomerStatsService;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/customerStats")
-@CrossOrigin(origins = "*")
 public class CustomerStatsController {
 
-    @Autowired
-    private CustomerStatsRepository customerStatsRepository;
+    private final CustomerStatsService statsService;
+
+    public CustomerStatsController(CustomerStatsService statsService) {
+        this.statsService = statsService;
+    }
 
     @GetMapping
-    public List<CustomerStats> getAllCustomerStats() {
-        return customerStatsRepository.findAll();
+    public ResponseEntity<List<CustomerStats>> getAllCustomerStats(@RequestParam Map<String, String> allParams) {
+        Page<CustomerStats> page = statsService.getStats(allParams);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Total-Count", String.valueOf(page.getTotalElements()));
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
     @GetMapping("/{id}")
-    public CustomerStats getCustomerStatsById(@PathVariable String id) {
-        return customerStatsRepository.findById(id).orElse(null);
+    public ResponseEntity<CustomerStats> getCustomerStatsById(@PathVariable String id) {
+        return statsService.getStatsById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<CustomerStats> createStats(@RequestBody CustomerStats stats) {
+        CustomerStats saved = statsService.saveStats(stats);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<CustomerStats> updateStats(@PathVariable String id, @RequestBody CustomerStats stats) {
+        return statsService.updateStats(id, stats)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
