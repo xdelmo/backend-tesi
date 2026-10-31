@@ -58,7 +58,7 @@ Layered architecture under `com.apexflow`:
 - Gli ID entità sono `String` (es. generati a 16 caratteri per `Customer`, prefissati `ORD-` per `Order`, `PROD-` per `Product`). Solo `User` e `OrderItem` usano ID numerici auto-incrementali `Long`.
 - `Customer`: include `subscriptionEndDate` (`LocalDate`) e `@Transient List<CustomerStats> customerStats` per embedding (`_embed=customerStats`).
 - `User`: include `@CreationTimestamp createdAt` e `@UpdateTimestamp updatedAt`.
-- `Order` e `OrderItem`: associazione bidirezionale JPA (Cascade `ALL`, `orphanRemoval = true`). `OrderItem.order` è annotato con `@JsonIgnore`, `@ToString.Exclude` e `@EqualsAndHashCode.Exclude` per evitare cicli di serializzazione e ricorsione.
+- `Order` e `OrderItem`: associazione bidirezionale JPA (Cascade `ALL`, `orphanRemoval = true`). `OrderItem.order` è annotato con `@JsonIgnore`, `@ToString.Exclude` e `@EqualsAndHashCode.Exclude` per evitare cicli di serializzazione e ricorsione. `Order` include anche `@Transient Customer customer` per espansione genitore (`_expand=customer`), risolto con singola query batch `findAllById` in `OrderService` per eliminare N+1 query.
 - Transazione creazione ordine: `OrderService.createOrder` salva l'ordine e se contiene prodotti di tipo abbonamento (*Mensile* o *Annuale*), estende atomicamente `subscriptionEndDate` del cliente, imposta lo stato ad `"Attivo"` e crea/aggiorna il record aggregato in `CustomerStats`.
 
 ### 6. Sicurezza, CORS e Middleware

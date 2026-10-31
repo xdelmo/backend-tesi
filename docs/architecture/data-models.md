@@ -41,6 +41,9 @@ Rappresentano la transazione di acquisto e i singoli articoli inclusi.
 | `discountAmount` | `discount_amount`| `DOUBLE PRECISION` | No | Sconto commerciale |
 | `total` | `total` | `DOUBLE PRECISION` | No | Totale finale addebitato |
 
+- **Proprietà Transitorie (`@Transient`)**:
+  - `Customer customer`: popolato on-demand tramite query batch quando viene passato il parametro `_expand=customer` o durante la lettura per ID / creazione ordine. Evita query N+1 serializzando l'anagrafica cliente associata.
+
 ### `OrderItem` (`order_items`)
 | Campo Java | Colonna DB | Tipo | Nullable | Descrizione |
 |---|---|---|---|---|

@@ -69,3 +69,21 @@ In `SecurityConfig`, il bean `CorsConfiguration` espone esplicitamente tale head
 config.setExposedHeaders(List.of("X-Total-Count", "Authorization"));
 ```
 Questo consente a `CustomerService` e `OrderService` in Angular di leggere `response.headers.get('X-Total-Count')` per impostare correttamente la paginazione di PrimeNG `p-table`.
+
+---
+
+## 4. Embedding ed Espansione Risorse Collegate (`_embed` e `_expand`)
+
+ApexFlow supporta le due convenzioni REST essenziali per il client SPA senza introdurre N+1 query:
+
+### 4.1 Embedding Figli (`_embed=customerStats`)
+- **Contesto**: `GET /api/customers?_embed=customerStats`
+- **Comportamento**: Popola per ciascun cliente paginato la proprietà transitoria `Customer.customerStats` caricando le metriche aggregate associate, consentendo a `customer-list.component.html` di mostrare il fatturato generato da ciascun cliente.
+
+### 4.2 Espansione Genitore (`_expand=customer`)
+- **Contesto**: `GET /api/orders?_expand=customer`
+- **Comportamento**: Risolve per ogni ordine la relazione col genitore associato `Order.customerId`. Per garantire alte prestazioni e scongiurare N+1 query:
+  1. Estrae l'insieme di tutti i `customerId` unici dalla pagina di ordini.
+  2. Esegue una singola query batch `customerRepository.findAllById(customerIds)`.
+  3. Mappa in memoria ogni `Customer` sull'attributo `@Transient Order.customer`.
+- Consente al frontend Angular (`order-list.component.html`) di accedere direttamente a `{{ order.customer.name }}` senza dover effettuare ulteriori chiamate HTTP asincrone.

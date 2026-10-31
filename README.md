@@ -65,7 +65,7 @@ Gestione transazionale degli acquisti, calcolo del fatturato, estensione automat
 
 | Metodo | URI | Status Successo | Descrizione |
 |---|---|---|---|
-| `GET` | `/api/orders` | `200 OK` | Elenco ordini paginato. Supporta filtri `customer.name_like`, status e date. |
+| `GET` | `/api/orders` | `200 OK` | Elenco ordini paginato. Supporta `_expand=customer` (risoluzione cliente associato senza N+1), filtri `customer.name_like`, status e date. |
 | `GET` | `/api/orders/{id}` | `200 OK` / `404` | Dettaglio ordine con lista items (`OrderItem`). |
 | `POST` | `/api/orders` | `201 CREATED` | Creazione ordine con logica transazionale atomica per estensione abbonamenti e statistiche. |
 | `DELETE` | `/api/orders/{id}` | `204 NO CONTENT` / `404` | Eliminazione ordine e item associati (cascade orphan removal). |
