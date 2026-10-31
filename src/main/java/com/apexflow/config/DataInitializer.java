@@ -17,6 +17,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -56,6 +57,7 @@ public class DataInitializer {
         return args -> seedDatabase();
     }
 
+    @Transactional
     public void seedDatabase() {
         ClassPathResource resource = new ClassPathResource("data/seed-db.json");
         if (!resource.exists()) {

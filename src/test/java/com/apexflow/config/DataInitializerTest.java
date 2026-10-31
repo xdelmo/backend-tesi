@@ -6,6 +6,7 @@ import com.apexflow.repository.CustomerStatsRepository;
 import com.apexflow.repository.OrderRepository;
 import com.apexflow.repository.ProductRepository;
 import com.apexflow.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,24 +35,34 @@ public class DataInitializerTest {
     @Autowired
     private DataInitializer dataInitializer;
 
-    @Test
-    void testInitialDataSeededCounts() {
-        assertThat(customerRepository.count()).isGreaterThanOrEqualTo(8);
-        assertThat(productRepository.count()).isGreaterThanOrEqualTo(8);
-        assertThat(orderRepository.count()).isGreaterThanOrEqualTo(7);
-        assertThat(userRepository.count()).isGreaterThanOrEqualTo(2);
-        assertThat(customerStatsRepository.count()).isGreaterThanOrEqualTo(5);
+    @BeforeEach
+    void setUp() {
+        orderRepository.deleteAll();
+        customerStatsRepository.deleteAll();
+        productRepository.deleteAll();
+        customerRepository.deleteAll();
+        userRepository.deleteAll();
+        dataInitializer.seedDatabase();
     }
 
     @Test
-    void testCompleteDatabaseSeedingFromCleanState() throws Exception {
+    void testInitialDataSeededCounts() {
+        assertThat(customerRepository.count()).isEqualTo(8);
+        assertThat(productRepository.count()).isEqualTo(8);
+        assertThat(orderRepository.count()).isEqualTo(7);
+        assertThat(userRepository.count()).isEqualTo(2);
+        assertThat(customerStatsRepository.count()).isEqualTo(5);
+    }
+
+    @Test
+    void testCompleteDatabaseSeedingFromCleanState() {
         orderRepository.deleteAll();
         customerStatsRepository.deleteAll();
         productRepository.deleteAll();
         customerRepository.deleteAll();
         userRepository.deleteAll();
 
-        dataInitializer.initDatabase().run();
+        dataInitializer.seedDatabase();
 
         assertThat(customerRepository.count()).isEqualTo(8);
         assertThat(productRepository.count()).isEqualTo(8);
@@ -61,7 +72,7 @@ public class DataInitializerTest {
     }
 
     @Test
-    void testSeedingIdempotency() throws Exception {
+    void testSeedingIdempotency() {
         long initialCustomers = customerRepository.count();
         long initialProducts = productRepository.count();
         long initialOrders = orderRepository.count();
@@ -69,7 +80,7 @@ public class DataInitializerTest {
         long initialStats = customerStatsRepository.count();
 
         // Run initializer again when tables already contain data
-        dataInitializer.initDatabase().run();
+        dataInitializer.seedDatabase();
 
         assertThat(customerRepository.count()).isEqualTo(initialCustomers);
         assertThat(productRepository.count()).isEqualTo(initialProducts);
