@@ -1,58 +1,58 @@
 package com.apexflow.controller;
 
 import com.apexflow.model.Product;
-import com.apexflow.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.apexflow.service.ProductService;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin(origins = "*")
 public class ProductController {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
     @GetMapping
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public ResponseEntity<List<Product>> getProducts(@RequestParam Map<String, String> allParams) {
+        Page<Product> page = productService.getProducts(allParams);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Total-Count", String.valueOf(page.getTotalElements()));
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
     @GetMapping("/{id}")
-    public Product getProductById(@PathVariable String id) {
-        return productRepository.findById(id).orElse(null);
+    public ResponseEntity<Product> getProductById(@PathVariable String id) {
+        return productService.getProductById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Product createProduct(@RequestBody Product product) {
-        return productRepository.save(product);
+    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+        Product created = productService.createProduct(product);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PatchMapping("/{id}")
-    public Product updateProduct(@PathVariable String id, @RequestBody Product productDetails) {
-        return productRepository.findById(id).map(product -> {
-            if (productDetails.getName() != null) product.setName(productDetails.getName());
-            if (productDetails.getDescription() != null) product.setDescription(productDetails.getDescription());
-            if (productDetails.getCategory() != null) product.setCategory(productDetails.getCategory());
-            if (productDetails.getPrice() != null) product.setPrice(productDetails.getPrice());
-            if (productDetails.getDuration() != null) product.setDuration(productDetails.getDuration());
-            if (productDetails.getStatus() != null) product.setStatus(productDetails.getStatus());
-            return productRepository.save(product);
-        }).orElse(null);
+    public ResponseEntity<Product> updateProduct(@PathVariable String id, @RequestBody Product productDetails) {
+        return productService.updateProduct(id, productDetails)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public void deleteProduct(@PathVariable String id) {
-        productRepository.deleteById(id);
+    public ResponseEntity<Void> deleteProduct(@PathVariable String id) {
+        return productService.deleteProduct(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }
