@@ -20,6 +20,10 @@ public class QueryFilterParser {
     }
 
     public static Pageable getPageable(Map<String, String> params) {
+        if (params == null) {
+            params = Collections.emptyMap();
+        }
+
         int page = 1;
         if (params.containsKey("_page")) {
             try {
@@ -37,7 +41,7 @@ public class QueryFilterParser {
         Sort sort = Sort.unsorted();
         if (params.containsKey("_sort")) {
             String sortField = params.get("_sort");
-            if (!sortField.contains(".")) {
+            if (sortField != null && !sortField.contains(".")) {
                 Sort.Direction direction = "desc".equalsIgnoreCase(params.get("_order"))
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC;
@@ -49,10 +53,11 @@ public class QueryFilterParser {
     }
 
     public static <T> Specification<T> parse(Map<String, String> params) {
+        final Map<String, String> queryParams = (params == null) ? Collections.emptyMap() : params;
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            for (Map.Entry<String, String> entry : params.entrySet()) {
+            for (Map.Entry<String, String> entry : queryParams.entrySet()) {
                 String key = entry.getKey();
                 String value = entry.getValue();
 
