@@ -3,6 +3,8 @@ package com.apexflow.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Entity
 @Table(name = "order_items")
@@ -22,5 +24,7 @@ public class OrderItem {
     @ManyToOne
     @JoinColumn(name = "order_id")
     @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Order order;
 }
