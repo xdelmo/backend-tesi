@@ -117,6 +117,19 @@ curl -s "http://localhost:8080/api/orders/stats/monthly-revenue?year=2026"
 
 ---
 
+### 🗄 Inizializzazione Automatica Dati (`DataInitializer`)
+
+All'avvio dell'applicazione, `DataInitializer` popola in modo idempotente il database PostgreSQL leggendo il dataset completo da `src/main/resources/data/seed-db.json` (speculare a `dashboard-tesi/db.json`):
+- **Utenti (`users`)**: 2 account preconfigurati (`admin@demo.com`, `user@demo.com`).
+- **Clienti (`customers`)**: 8 profili aziendali con piani di abbonamento e scadenze.
+- **Statistiche Clienti (`customer_stats`)**: 5 record con ricavi aggregati, ordini totali e date ultimo ordine.
+- **Prodotti (`products`)**: 8 prodotti/servizi enterprise (Cloud, Analytics, AI, Consulenza).
+- **Ordini (`orders` & `order_items`)**: 7 ordini con relazione bidirezionale `OrderItem -> Order` preservata.
+- **Idempotenza & Logging**: Esegue controlli preventivi sul conteggio delle tabelle per evitare duplicazioni e notifica tutte le operazioni tramite SLF4J (`LoggerFactory.getLogger(DataInitializer.class)`).
+- **Iniezione**: Adotta la Constructor Injection pura su tutti i repository e l'`ObjectMapper`.
+
+---
+
 ## 🛠 Tech Stack
 
 - **Linguaggio:** [Java 21](https://www.java.com/)
