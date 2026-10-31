@@ -1,0 +1,362 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "email": "admin@demo.com",
+      "password": "password",
+      "name": "Utente Admin",
+      "role": "admin",
+      "avatar": "https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png",
+      "createdAt": "2026-02-26T10:19:35.273Z",
+      "updatedAt": "2026-02-26T10:19:49.684Z"
+    },
+    {
+      "id": "2",
+      "email": "user@demo.com",
+      "password": "password",
+      "name": "Utente Base",
+      "role": "user",
+      "avatar": "https://primefaces.org/cdn/primeng/images/demo/avatar/asiyajavayant.png",
+      "createdAt": "2026-02-26T10:19:35.273Z",
+      "updatedAt": "2026-02-26T11:23:11.153Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "A1b2C3d4E5f6G7h8",
+      "name": "Mario Rossi",
+      "email": "mario@rossi.tech",
+      "company": "Tech Spa",
+      "status": "Attivo",
+      "industry": "Creative",
+      "plan": "Enterprise",
+      "subscriptionEndDate": "2027-01-21"
+    },
+    {
+      "id": "I9j0K1l2M3n4O5p6",
+      "name": "Luca Bianchi",
+      "email": "l.bianchi@consulting.it",
+      "company": "Consulting Srl",
+      "status": "Scaduto",
+      "industry": "Software",
+      "plan": "Professional",
+      "subscriptionEndDate": "2026-02-09"
+    },
+    {
+      "id": "Q7r8S9t0U1v2W3x4",
+      "name": "Giulia Verdi",
+      "email": "g.verdi@design.it",
+      "company": "Design Studio",
+      "status": "Scaduto",
+      "industry": "Creative",
+      "plan": "Professional",
+      "subscriptionEndDate": "2026-01-20"
+    },
+    {
+      "id": "Y5z6A7b8C9d0E1f2",
+      "name": "Anna Neri",
+      "email": "a.neri@ecommerce.com",
+      "company": "E-commerce Plus",
+      "status": "Inattivo",
+      "industry": "Retail",
+      "plan": "Basic"
+    },
+    {
+      "id": "G3h4I5j6K7l8M9n0",
+      "name": "Paolo Gialli",
+      "email": "p.gialli@logistica.eu",
+      "company": "Fast Delivery",
+      "status": "Attivo",
+      "industry": "Logistics",
+      "plan": "Enterprise",
+      "subscriptionEndDate": "2027-02-17"
+    },
+    {
+      "id": "O1p2Q3r4S5t6U7v8",
+      "name": "Elena Blu",
+      "email": "elena@cyber.io",
+      "company": "Cyber Shield",
+      "status": "Attivo",
+      "industry": "Cybersecurity",
+      "plan": "Enterprise"
+    },
+    {
+      "id": "C8d9E0f1G2h3I4j5",
+      "name": "Marco Verdi",
+      "email": "marco.verdi@greenenergy.com",
+      "company": "Green Energy SpA",
+      "status": "Attivo",
+      "industry": "Energy",
+      "plan": "Enterprise"
+    },
+    {
+      "id": "K6l7M8n9O0p1Q2r3",
+      "name": "Sara Esposito",
+      "email": "sara.e@fintech.io",
+      "company": "FinTech Solutions",
+      "status": "Inattivo",
+      "industry": "Finance",
+      "plan": "Professional"
+    }
+  ],
+  "customerStats": [
+    {
+      "id": "cs-1767988302598",
+      "customerId": "I9j0K1l2M3n4O5p6",
+      "totalRevenue": 499.5,
+      "totalOrders": 1,
+      "lastOrderDate": "2026-01-09T19:51:42.598Z"
+    },
+    {
+      "id": "cs-1767988641922",
+      "customerId": "Q7r8S9t0U1v2W3x4",
+      "totalRevenue": 1198.8,
+      "totalOrders": 1,
+      "lastOrderDate": "2026-01-09T19:57:21.922Z"
+    },
+    {
+      "id": "cs-1769035371113",
+      "customerId": "A1b2C3d4E5f6G7h8",
+      "totalRevenue": 2752.8,
+      "totalOrders": 2,
+      "lastOrderDate": "2026-01-21T22:56:10.767Z"
+    },
+    {
+      "id": "cs-1771316951992",
+      "customerId": "O1p2Q3r4S5t6U7v8",
+      "totalRevenue": 0,
+      "totalOrders": 1,
+      "lastOrderDate": "2026-02-17T08:29:11.992Z"
+    },
+    {
+      "id": "cs-1771341939624",
+      "customerId": "G3h4I5j6K7l8M9n0",
+      "totalRevenue": 5772,
+      "totalOrders": 4,
+      "lastOrderDate": "2026-02-25T18:44:00.315Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-719",
+      "customerId": "I9j0K1l2M3n4O5p6",
+      "date": "2026-01-09T19:51:34.467Z",
+      "status": "Pagato",
+      "type": "Abbonamento",
+      "subtotal": 500,
+      "tax": 49.5,
+      "discountAmount": 50,
+      "total": 499.5,
+      "items": [
+        {
+          "productId": "PROD-CL-001",
+          "name": "Archiviazione Enterprise",
+          "price": 500,
+          "quantity": 1,
+          "category": "Cloud"
+        }
+      ]
+    },
+    {
+      "id": "ORD-4736",
+      "customerId": "Q7r8S9t0U1v2W3x4",
+      "date": "2026-01-09T19:57:10.184Z",
+      "status": "Pagato",
+      "type": "Abbonamento",
+      "subtotal": 1200,
+      "tax": 118.8,
+      "discountAmount": 120,
+      "total": 1198.8,
+      "items": [
+        {
+          "productId": "PROD-CL-002",
+          "name": "Calcolo Serverless",
+          "price": 1200,
+          "quantity": 1,
+          "category": "Cloud"
+        }
+      ]
+    },
+    {
+      "id": "ORD-2278",
+      "customerId": "A1b2C3d4E5f6G7h8",
+      "date": "2026-01-21T22:42:30.320Z",
+      "status": "Pagato",
+      "type": "Abbonamento",
+      "subtotal": 1100,
+      "tax": 96.8,
+      "discountAmount": 220,
+      "total": 976.8,
+      "items": [
+        {
+          "productId": "PROD-AN-002",
+          "name": "Connettore Data Warehouse",
+          "price": 300,
+          "quantity": 1,
+          "category": "Analytics"
+        },
+        {
+          "productId": "PROD-AN-001",
+          "name": "Dashboard Predittiva",
+          "price": 800,
+          "quantity": 1,
+          "category": "Analytics"
+        }
+      ]
+    },
+    {
+      "id": "ORD-4739",
+      "customerId": "A1b2C3d4E5f6G7h8",
+      "date": "2026-01-21T22:55:27.404Z",
+      "status": "Pagato",
+      "type": "Abbonamento",
+      "subtotal": 2000,
+      "tax": 176,
+      "discountAmount": 400,
+      "total": 1776,
+      "items": [
+        {
+          "productId": "PROD-AI-002",
+          "name": "Riconoscimento Immagini API",
+          "price": 2000,
+          "quantity": 1,
+          "category": "AI"
+        }
+      ]
+    },
+    {
+      "customerId": "O1p2Q3r4S5t6U7v8",
+      "date": "2026-02-17T08:29:01.257Z",
+      "status": "In Attesa",
+      "type": "Abbonamento",
+      "subtotal": 300,
+      "tax": 26.4,
+      "discountAmount": 60,
+      "total": 266.4,
+      "items": [
+        {
+          "productId": "PROD-AN-002",
+          "name": "Connettore Data Warehouse",
+          "price": 300,
+          "quantity": 1,
+          "category": "Analytics"
+        }
+      ],
+      "id": "ORD-4281"
+    },
+    {
+      "customerId": "G3h4I5j6K7l8M9n0",
+      "date": "2025-08-12T22:00:00.000Z",
+      "status": "Pagato",
+      "type": "Abbonamento",
+      "subtotal": 1200,
+      "tax": 105.6,
+      "discountAmount": 240,
+      "total": 1065.6,
+      "items": [
+        {
+          "productId": "PROD-CL-002",
+          "name": "Calcolo Serverless",
+          "price": 1200,
+          "quantity": 1,
+          "category": "Cloud"
+        }
+      ],
+      "id": "ORD-5095"
+    },
+    {
+      "customerId": "G3h4I5j6K7l8M9n0",
+      "date": "2026-03-11T23:00:00.000Z",
+      "status": "In Attesa",
+      "type": "Abbonamento",
+      "subtotal": 800,
+      "tax": 70.4,
+      "discountAmount": 160,
+      "total": 710.4,
+      "items": [
+        {
+          "productId": "PROD-AN-001",
+          "name": "Dashboard Predittiva",
+          "price": 800,
+          "quantity": 1,
+          "category": "Analytics"
+        }
+      ],
+      "id": "ORD-9108"
+    }
+  ],
+  "products": [
+    {
+      "id": "PROD-CL-001",
+      "name": "Archiviazione Enterprise",
+      "description": "Storage cloud scalabile ad alta disponibilità",
+      "category": "Cloud",
+      "price": 500,
+      "duration": "Mensile",
+      "status": "Attivo"
+    },
+    {
+      "id": "PROD-CL-002",
+      "name": "Calcolo Serverless",
+      "description": "Risorse di calcolo on-demand",
+      "category": "Cloud",
+      "price": 1200,
+      "duration": "Mensile",
+      "status": "Attivo"
+    },
+    {
+      "id": "PROD-AN-001",
+      "name": "Dashboard Predittiva",
+      "description": "Analisi avanzata con previsioni AI",
+      "category": "Analytics",
+      "price": 800,
+      "duration": "Annuale",
+      "status": "Attivo"
+    },
+    {
+      "id": "PROD-AN-002",
+      "name": "Connettore Data Warehouse",
+      "description": "Strumento di integrazione per i principali data warehouse",
+      "category": "Analytics",
+      "price": 300,
+      "duration": "Una Tantum",
+      "status": "Attivo"
+    },
+    {
+      "id": "PROD-AI-001",
+      "name": "Analisi del Sentiment NLP",
+      "description": "API di analisi del testo basata su AI",
+      "category": "AI",
+      "price": 1500,
+      "duration": "Mensile",
+      "status": "Bozza"
+    },
+    {
+      "id": "PROD-AI-002",
+      "name": "Riconoscimento Immagini API",
+      "description": "Computer vision per la classificazione delle immagini",
+      "category": "AI",
+      "price": 2000,
+      "duration": "Mensile",
+      "status": "Attivo"
+    },
+    {
+      "id": "PROD-CS-001",
+      "name": "Consulenza Strategica IT",
+      "description": "Analisi e pianificazione della trasformazione digitale aziendale",
+      "category": "Consulenza",
+      "price": 5000,
+      "duration": "Una Tantum",
+      "status": "Attivo"
+    },
+    {
+      "id": "PROD-CS-002",
+      "name": "Audit Sicurezza Informatica",
+      "description": "Valutazione completa delle vulnerabilità e compliance GDPR",
+      "category": "Consulenza",
+      "price": 3500,
+      "duration": "Una Tantum",
+      "status": "Attivo"
+    }
+  ]
+}

@@ -4,34 +4,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-ApexFlow backend: Spring Boot REST API (Java 21, Maven) serving an Angular frontend (customers, products, orders, users, customer stats). Code comments and seed data are in Italian.
+ApexFlow backend: Spring Boot REST API (Java 21, Spring Boot 4.0.1, Maven, PostgreSQL) serving an Angular 19 + PrimeNG frontend (customers, products, orders, users, customer stats). Code comments, models and domain concepts are in Italian.
 
 ## Commands
 
 ```bash
-./mvnw clean install                 # build + tests
+./mvnw clean install                 # build + full test suite
 ./mvnw spring-boot:run               # run on http://localhost:8080
-./mvnw clean package -DskipTests     # what the Dockerfile runs
-./mvnw test -Dtest=ApexFlowApplicationTests#contextLoads   # single test
+./mvnw test                          # run all tests
+./mvnw test -Dtest=CustomerControllerTest # run single test class
 ```
 
-The app (and the only test, a `@SpringBootTest` context load) needs a reachable PostgreSQL. Defaults in `application.properties`: `jdbc:postgresql://localhost:5432/apexflow_db`, user `postgres`, password `admin`; override with `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`, port with `PORT`.
+Requires a reachable PostgreSQL instance (local or remote).
+Defaults in `application.properties`:
+- `spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/apexflow_db}`
+- `spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}`
+- `spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:admin}`
+- `server.port=${PORT:8080}`
+- `spring.mvc.problemdetails.enabled=true`
 
-## Architecture
+## Architecture & Conventions (Conforme a `springboot-patterns`)
 
-Flat three-layer layout under `com.apexflow`: `controller` → `repository` (plain `JpaRepository` interfaces) → `model` (Lombok `@Data` JPA entities). There is **no service layer and no DTOs**: controllers inject repositories directly and serialize entities as JSON.
+Layered architecture under `com.apexflow`:
+`controller` → `service` → `repository` → `model`
 
-Conventions to follow when adding endpoints:
-- Each controller has `@RequestMapping("/api/<resource>")` and `@CrossOrigin(origins = "*")`.
-- Not-found returns `null` (HTTP 200 with empty body) via `findById(id).orElse(null)`, not 404.
-- Updates use `PATCH` with partial-merge semantics: copy each non-null field from the request body onto the loaded entity (see `CustomerController.updateCustomer`).
-- Most entity IDs are client-supplied `String`s (e.g. `PROD-CL-001`, `ORD-719`); only `User` and `OrderItem` use generated `Long` IDs.
-- Relations are by ID string, not JPA associations (`Order.customerId`, `CustomerStats.customerId`, `OrderItem.productId`). The only real association is `Order` 1→N `OrderItem` (cascade ALL, orphanRemoval); `OrderItem.order` is `@JsonIgnore` to avoid recursion.
+### 1. Iniezione delle Dipendenze
+- **Constructor Injection esclusiva**: Campi `private final` con costruttore esplicito (o Lombok `@RequiredArgsConstructor`).
+- **ANTI-PATTERN VIETATO**: Mai usare `@Autowired` sui campi privati.
 
-Config:
-- `SecurityConfig`: Spring Security is on the classpath but configured to `permitAll()` with CSRF disabled — no auth is enforced. User passwords are stored in plain text.
-- `DataInitializer`: `CommandLineRunner` that seeds each table only if empty. Schema is managed by `spring.jpa.hibernate.ddl-auto=update` (no migrations).
+### 2. Transazionalità
+- I Service dichiarano `@Transactional(readOnly = true)` a livello di classe per ottimizzare le sessioni di lettura JPA.
+- I metodi di mutazione (`create*`, `update*`, `delete*`) dichiarano esplicitamente `@Transactional`.
+
+### 3. Paginazione, Ordinamento e Filtri Dinamici
+- Gestiti tramite `QueryFilterParser`:
+  - `_page`: 1-indexed (convertito a 0-indexed per Spring Data `PageRequest`).
+  - `_limit`: dimensione pagina (default 10).
+  - `_sort` e `_order`: ordinamento per campo (`asc`/`desc`).
+  - `*_like`: ricerca case-insensitive substring `like lower("%val%")`.
+  - Campi esatti (es. `status=Attivo`).
+  - Filtri cross-entity: es. `customer.name_like` sugli ordini.
+  - Ordinamento speciale: `_sort=customerStats.totalRevenue` sui clienti.
+- Le risposte paginate restituiscono l'header HTTP `X-Total-Count` valorizzato con il totale degli elementi (`page.getTotalElements()`).
+
+### 4. Codici di Stato HTTP
+- `GET /api/<resource>`: `200 OK` con `X-Total-Count` header.
+- `GET /api/<resource>/{id}`: `200 OK` se presente, `404 NOT FOUND` se assente.
+- `POST /api/<resource>`: `201 CREATED` con payload della risorsa creata.
+- `PATCH /api/<resource>/{id}`: `200 OK` con payload aggiornato, `404 NOT FOUND` se assente.
+- `DELETE /api/<resource>/{id}`: `204 NO CONTENT` se eliminato con successo, `404 NOT FOUND` se non trovato.
+
+### 5. Dominio & Relazioni
+- Gli ID entità sono `String` (es. generati a 16 caratteri per `Customer`, prefissati `ORD-` per `Order`, `PROD-` per `Product`). Solo `User` e `OrderItem` usano ID numerici auto-incrementali `Long`.
+- `Customer`: include `subscriptionEndDate` (`LocalDate`) e `@Transient List<CustomerStats> customerStats` per embedding (`_embed=customerStats`).
+- `User`: include `@CreationTimestamp createdAt` e `@UpdateTimestamp updatedAt`.
+- `Order` e `OrderItem`: associazione bidirezionale JPA (Cascade `ALL`, `orphanRemoval = true`). `OrderItem.order` è annotato con `@JsonIgnore`, `@ToString.Exclude` e `@EqualsAndHashCode.Exclude` per evitare cicli di serializzazione e ricorsione. `Order` include anche `@Transient Customer customer` per espansione genitore (`_expand=customer`), risolto con singola query batch `findAllById` in `OrderService` per eliminare N+1 query.
+- Transazione creazione ordine: `OrderService.createOrder` salva l'ordine e se contiene prodotti di tipo abbonamento (*Mensile* o *Annuale*), estende atomicamente `subscriptionEndDate` del cliente, imposta lo stato ad `"Attivo"` e crea/aggiorna il record aggregato in `CustomerStats`.
+
+### 6. Sicurezza, CORS e Middleware
+- `SecurityConfig`: CSRF disabilitato, endpoint `/api/**` accessibili per compatibilità con il token frontend. CORS configurato globalmente esponendo `X-Total-Count` e `Authorization`.
+- `RequestLoggingFilter`: `OncePerRequestFilter` per il tracciamento strutturato con SLF4J della latenza (`durationMs`), metodo, URI e codice HTTP di risposta.
 
 ## Deployment
 
-Render.com builds the `Dockerfile` (multi-stage, temurin 21) on every push to `main`, backed by a Render-managed PostgreSQL. Live: https://backend-tesi.onrender.com/
+Deploy su Render.com tramite `Dockerfile` (multi-stage, Eclipse Temurin 21) ad ogni push su `main`.
+URL: https://backend-tesi.onrender.com/

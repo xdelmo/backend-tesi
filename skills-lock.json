@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "springboot-patterns": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/springboot-patterns/SKILL.md",
+      "computedHash": "5902ed569b83996c1c3cc48d973f35702fadec46445a2988847d4ed725b488c5"
+    }
+  }
+}

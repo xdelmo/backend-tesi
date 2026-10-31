@@ -1,46 +1,58 @@
 package com.apexflow.controller;
 
 import com.apexflow.model.Customer;
-import com.apexflow.repository.CustomerRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.apexflow.service.CustomerService;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
-@RestController // 1. Definisce che questa classe gestisce API REST
-@RequestMapping("/api/customers") // 2. L'URL base sarà http://localhost:8080/api/customers
-@CrossOrigin(origins = "*") // 3. IMPORTANTE: Permette al frontend di comunicare con il backend
+@RestController
+@RequestMapping("/api/customers")
 public class CustomerController {
 
-    @Autowired // Iniettiamo il "telecomando" del database
-    private CustomerRepository customerRepository;
+    private final CustomerService customerService;
 
-    // Metodo per ottenere tutti i clienti
+    public CustomerController(CustomerService customerService) {
+        this.customerService = customerService;
+    }
+
     @GetMapping
-    public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+    public ResponseEntity<List<Customer>> getCustomers(@RequestParam Map<String, String> allParams) {
+        Page<Customer> page = customerService.getCustomers(allParams);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Total-Count", String.valueOf(page.getTotalElements()));
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
     @GetMapping("/{id}")
-    public Customer getCustomerById(@PathVariable String id) {
-        return customerRepository.findById(id).orElse(null);
+    public ResponseEntity<Customer> getCustomerById(@PathVariable String id) {
+        return customerService.getCustomerById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Customer createCustomer(@RequestBody Customer customer) {
-        return customerRepository.save(customer);
+    public ResponseEntity<Customer> createCustomer(@RequestBody Customer customer) {
+        Customer created = customerService.createCustomer(customer);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PatchMapping("/{id}")
-    public Customer updateCustomer(@PathVariable String id, @RequestBody Customer customerDetails) {
-        return customerRepository.findById(id).map(customer -> {
-            if (customerDetails.getName() != null) customer.setName(customerDetails.getName());
-            if (customerDetails.getEmail() != null) customer.setEmail(customerDetails.getEmail());
-            if (customerDetails.getCompany() != null) customer.setCompany(customerDetails.getCompany());
-            if (customerDetails.getStatus() != null) customer.setStatus(customerDetails.getStatus());
-            if (customerDetails.getIndustry() != null) customer.setIndustry(customerDetails.getIndustry());
-            if (customerDetails.getPlan() != null) customer.setPlan(customerDetails.getPlan());
-            return customerRepository.save(customer);
-        }).orElse(null);
+    public ResponseEntity<Customer> updateCustomer(@PathVariable String id, @RequestBody Customer customerDetails) {
+        return customerService.updateCustomer(id, customerDetails)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable String id) {
+        return customerService.deleteCustomer(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }

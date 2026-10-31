@@ -1,5 +1,6 @@
 package com.apexflow.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -26,4 +27,9 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
+
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Customer customer;
 }
+
