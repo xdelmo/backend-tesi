@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the complete Spring Boot backend for ApexFlow, providing 100% contract compatibility with the Angular frontend (pagination `_page`/`_limit`, sorting `_sort`/`_order`, dynamic filters `*_like`, `X-Total-Count` header, order business logic, subscription expiration scheduler, and automatic `db.json` seeding).
+**Goal:** Implement the complete Spring Boot backend for ApexFlow, strictly adhering to `springboot-patterns` (constructor injection, `@Transactional(readOnly = true)` where appropriate, SLF4J logging, standard REST status codes, RFC 7807 problem details) while providing 100% contract compatibility with the Angular frontend (pagination `_page`/`_limit`, sorting `_sort`/`_order`, dynamic filters `*_like`, `X-Total-Count` header, order business logic, subscription expiration scheduler, and automatic `db.json` seeding).
 
 **Architecture:** Layered architecture (REST Controller -> Transactional Service -> JPA Repository + Criteria API Specification Executor). A reusable `QueryFilterParser` translates Angular/json-server query params to Spring Data `Pageable` and `Specification<T>`.
 
-**Tech Stack:** Java 21, Spring Boot 4.0.1, Spring Data JPA, Spring Security, PostgreSQL, Lombok, Jackson, JUnit 5, Mockito, MockMvc.
+**Tech Stack:** Java 21, Spring Boot 4.0.1, Spring Data JPA, Spring Security, PostgreSQL, Lombok, Jackson, JUnit 5, Mockito, MockMvc, SLF4J.
 
 ## Global Constraints
 
@@ -16,18 +16,21 @@
 - Exposed Header: `X-Total-Count` in CORS and responses
 - Page numbering: Frontend sends 1-indexed `_page`; Spring Data uses 0-indexed page (`page - 1`)
 - Seeding: Auto-populate database on startup if empty using `seed-db.json` mirrored from `db.json`
+- Style: Constructor injection ONLY (no field `@Autowired`), SLF4J structured logging (no `System.out.println`), REST status codes (201 Created for POST, 204 No Content for DELETE).
 
 ---
 
-### Task 1: CORS & Security Configuration
+### Task 1: CORS, Security Configuration & RequestLoggingFilter
 
 **Files:**
 - Modify: `src/main/java/com/apexflow/config/SecurityConfig.java`
+- Create: `src/main/java/com/apexflow/config/RequestLoggingFilter.java`
+- Modify: `src/main/resources/application.properties`
 - Create: `src/test/java/com/apexflow/config/SecurityConfigTest.java`
 
 **Interfaces:**
-- Consumes: Spring Security `HttpSecurity`, `CorsConfigurationSource`
-- Produces: Permissive SecurityFilterChain with CORS exposing `X-Total-Count`
+- Consumes: Spring Security `HttpSecurity`, `CorsConfigurationSource`, `OncePerRequestFilter`
+- Produces: Permissive SecurityFilterChain with CORS exposing `X-Total-Count`, request latency audit logging, RFC 7807 problem details enabled.
 
 - [ ] **Step 1: Write the failing test for CORS configuration and X-Total-Count exposure**
 
@@ -74,12 +77,47 @@ public class SecurityConfigTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails or does not expose X-Total-Count**
+- [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=SecurityConfigTest`
-Expected: FAIL (missing `Access-Control-Expose-Headers` or CORS origin rejection)
+Expected: FAIL
 
-- [ ] **Step 3: Update `SecurityConfig.java` with complete CORS bean and permitAll**
+- [ ] **Step 3: Update `SecurityConfig.java`, create `RequestLoggingFilter.java`, and update `application.properties`**
+
+Create `src/main/java/com/apexflow/config/RequestLoggingFilter.java`:
+```java
+package com.apexflow.config;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+public class RequestLoggingFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        long start = System.currentTimeMillis();
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            long duration = System.currentTimeMillis() - start;
+            log.info("req method={} uri={} status={} durationMs={}",
+                    request.getMethod(), request.getRequestURI(), response.getStatus(), duration);
+        }
+    }
+}
+```
 
 Modify `src/main/java/com/apexflow/config/SecurityConfig.java`:
 ```java
@@ -126,6 +164,26 @@ public class SecurityConfig {
 }
 ```
 
+Modify `src/main/resources/application.properties` (add RFC 7807 problem details):
+```properties
+spring.application.name=ApexFlow
+
+# Database Configuration (supports Render env vars with local defaults)
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/apexflow_db}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:admin}
+
+# Server Configuration
+server.port=${PORT:8080}
+
+# Hibernate Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+
+# RFC 7807 Problem Details
+spring.mvc.problemdetails.enabled=true
+```
+
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `./mvnw test -Dtest=SecurityConfigTest`
@@ -134,8 +192,8 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/apexflow/config/SecurityConfig.java src/test/java/com/apexflow/config/SecurityConfigTest.java
-git commit -m "feat(security): configure CORS with exposed X-Total-Count header"
+git add src/main/java/com/apexflow/config/SecurityConfig.java src/main/java/com/apexflow/config/RequestLoggingFilter.java src/main/resources/application.properties src/test/java/com/apexflow/config/SecurityConfigTest.java
+git commit -m "feat(security): configure CORS, RequestLoggingFilter and RFC 7807 problem details"
 ```
 
 ---
@@ -148,10 +206,6 @@ git commit -m "feat(security): configure CORS with exposed X-Total-Count header"
 - Modify: `src/main/java/com/apexflow/model/Order.java`
 - Modify: `src/main/java/com/apexflow/model/OrderItem.java`
 - Create: `src/test/java/com/apexflow/model/EntityMappingTest.java`
-
-**Interfaces:**
-- Consumes: JPA / Hibernate annotations
-- Produces: Fully aligned entity classes supporting `subscriptionEndDate`, `createdAt`, `updatedAt`, and bidirectional Order-Item relation.
 
 - [ ] **Step 1: Write test for entity attributes and JSON serialization**
 
@@ -209,7 +263,7 @@ public class EntityMappingTest {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=EntityMappingTest`
-Expected: FAIL (cannot resolve method `setSubscriptionEndDate` on `Customer`)
+Expected: FAIL
 
 - [ ] **Step 3: Update `Customer.java`, `User.java`, `Order.java`, `OrderItem.java`**
 
@@ -286,8 +340,8 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/apexflow/model/Customer.java src/main/java/com/apexflow/model/User.java src/test/java/com/apexflow/model/EntityMappingTest.java
-git commit -m "feat(model): add subscriptionEndDate to Customer and timestamps to User"
+git add src/main/java/com/apexflow/model/*.java src/test/java/com/apexflow/model/EntityMappingTest.java
+git commit -m "feat(model): align Customer, User, and Order entities with frontend schema"
 ```
 
 ---
@@ -302,10 +356,6 @@ git commit -m "feat(model): add subscriptionEndDate to Customer and timestamps t
 - Modify: `src/main/java/com/apexflow/repository/UserRepository.java`
 - Modify: `src/main/java/com/apexflow/repository/CustomerStatsRepository.java`
 - Create: `src/test/java/com/apexflow/util/QueryFilterParserTest.java`
-
-**Interfaces:**
-- Consumes: `Map<String, String>` query parameters
-- Produces: `Pageable getPageable(Map<String, String> params)`, `Specification<T> parse(Map<String, String> params)`
 
 - [ ] **Step 1: Write test for QueryFilterParser**
 
@@ -343,7 +393,7 @@ public class QueryFilterParserTest {
 
         Pageable pageable = QueryFilterParser.getPageable(params);
 
-        assertThat(pageable.getPageNumber()).isEqualTo(1); // 1-indexed to 0-indexed
+        assertThat(pageable.getPageNumber()).isEqualTo(1);
         assertThat(pageable.getPageSize()).isEqualTo(25);
         assertThat(pageable.getSort().getOrderFor("name")).isNotNull();
         assertThat(pageable.getSort().getOrderFor("name").getDirection()).isEqualTo(Sort.Direction.DESC);
@@ -354,9 +404,9 @@ public class QueryFilterParserTest {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=QueryFilterParserTest`
-Expected: FAIL (`QueryFilterParser` does not exist)
+Expected: FAIL
 
-- [ ] **Step 3: Implement `QueryFilterParser.java` and update repositories**
+- [ ] **Step 3: Implement `QueryFilterParser.java` and update repositories with JpaSpecificationExecutor**
 
 Create `src/main/java/com/apexflow/util/QueryFilterParser.java`:
 ```java
@@ -395,7 +445,6 @@ public class QueryFilterParser {
         Sort sort = Sort.unsorted();
         if (params.containsKey("_sort")) {
             String sortField = params.get("_sort");
-            // ignore complex nested sort that cannot be mapped directly
             if (!sortField.contains(".")) {
                 Sort.Direction direction = "desc".equalsIgnoreCase(params.get("_order"))
                         ? Sort.Direction.DESC
@@ -448,21 +497,7 @@ public class QueryFilterParser {
 }
 ```
 
-Update each repository to extend `JpaSpecificationExecutor<T>`:
-Modify `src/main/java/com/apexflow/repository/CustomerRepository.java`:
-```java
-package com.apexflow.repository;
-
-import com.apexflow.model.Customer;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.stereotype.Repository;
-
-@Repository
-public interface CustomerRepository extends JpaRepository<Customer, String>, JpaSpecificationExecutor<Customer> {
-}
-```
-(Apply the same pattern to `OrderRepository.java`, `ProductRepository.java`, `UserRepository.java`, `CustomerStatsRepository.java`).
+Update each repository (`CustomerRepository`, `OrderRepository`, `ProductRepository`, `UserRepository`, `CustomerStatsRepository`) to extend `JpaSpecificationExecutor<T>`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -478,16 +513,12 @@ git commit -m "feat(query): implement QueryFilterParser and add JpaSpecification
 
 ---
 
-### Task 4: Customer Service & Controller (Pagination, Filters, Stats Embed & Sorting)
+### Task 4: Customer Service & Controller (Constructor Injection, Granular Transactions, 201 Created)
 
 **Files:**
 - Create: `src/main/java/com/apexflow/service/CustomerService.java`
 - Modify: `src/main/java/com/apexflow/controller/CustomerController.java`
 - Create: `src/test/java/com/apexflow/controller/CustomerControllerTest.java`
-
-**Interfaces:**
-- Consumes: `CustomerRepository`, `CustomerStatsRepository`, `QueryFilterParser`
-- Produces: `ResponseEntity<List<Customer>>` with `X-Total-Count` header, CRUD operations.
 
 - [ ] **Step 1: Write integration test for CustomerController pagination and headers**
 
@@ -502,9 +533,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -536,15 +568,24 @@ public class CustomerControllerTest {
                 .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$[0].name").value("Alpha Corp"));
     }
+
+    @Test
+    void testCreateCustomerReturnsCreatedStatus() throws Exception {
+        mockMvc.perform(post("/api/customers")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Beta Ltd\",\"email\":\"beta@ltd.com\",\"status\":\"Attivo\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Beta Ltd"));
+    }
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails (missing X-Total-Count header)**
+- [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=CustomerControllerTest`
 Expected: FAIL
 
-- [ ] **Step 3: Create `CustomerService.java` and update `CustomerController.java`**
+- [ ] **Step 3: Create `CustomerService.java` and update `CustomerController.java` using Constructor Injection and Transaction granularity**
 
 Create `src/main/java/com/apexflow/service/CustomerService.java`:
 ```java
@@ -555,7 +596,6 @@ import com.apexflow.model.CustomerStats;
 import com.apexflow.repository.CustomerRepository;
 import com.apexflow.repository.CustomerStatsRepository;
 import com.apexflow.util.QueryFilterParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -566,20 +606,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
+    private final CustomerStatsRepository customerStatsRepository;
 
-    @Autowired
-    private CustomerStatsRepository customerStatsRepository;
+    public CustomerService(CustomerRepository customerRepository, CustomerStatsRepository customerStatsRepository) {
+        this.customerRepository = customerRepository;
+        this.customerStatsRepository = customerStatsRepository;
+    }
 
     public Page<Customer> getCustomers(Map<String, String> params) {
         Pageable pageable = QueryFilterParser.getPageable(params);
         Specification<Customer> spec = QueryFilterParser.parse(params);
 
-        // Check if custom sorting by customerStats.totalRevenue is requested
         if ("customerStats.totalRevenue".equals(params.get("_sort"))) {
             List<Customer> allFiltered = customerRepository.findAll(spec);
             List<CustomerStats> allStats = customerStatsRepository.findAll();
@@ -624,6 +665,7 @@ public class CustomerService {
         });
     }
 
+    @Transactional
     public Customer createCustomer(Customer customer) {
         if (customer.getId() == null || customer.getId().isBlank()) {
             customer.setId(UUID.randomUUID().toString().replace("-", "").substring(0, 16));
@@ -631,6 +673,7 @@ public class CustomerService {
         return customerRepository.save(customer);
     }
 
+    @Transactional
     public Optional<Customer> updateCustomer(String id, Customer details) {
         return customerRepository.findById(id).map(c -> {
             if (details.getName() != null) c.setName(details.getName());
@@ -644,6 +687,7 @@ public class CustomerService {
         });
     }
 
+    @Transactional
     public boolean deleteCustomer(String id) {
         if (customerRepository.existsById(id)) {
             customerRepository.deleteById(id);
@@ -665,9 +709,9 @@ package com.apexflow.controller;
 
 import com.apexflow.model.Customer;
 import com.apexflow.service.CustomerService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -678,8 +722,11 @@ import java.util.Map;
 @RequestMapping("/api/customers")
 public class CustomerController {
 
-    @Autowired
-    private CustomerService customerService;
+    private final CustomerService customerService;
+
+    public CustomerController(CustomerService customerService) {
+        this.customerService = customerService;
+    }
 
     @GetMapping
     public ResponseEntity<List<Customer>> getCustomers(@RequestParam Map<String, String> allParams) {
@@ -698,7 +745,8 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<Customer> createCustomer(@RequestBody Customer customer) {
-        return ResponseEntity.ok(customerService.createCustomer(customer));
+        Customer created = customerService.createCustomer(customer);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PatchMapping("/{id}")
@@ -726,21 +774,17 @@ Expected: PASS
 
 ```bash
 git add src/main/java/com/apexflow/service/CustomerService.java src/main/java/com/apexflow/controller/CustomerController.java src/main/java/com/apexflow/repository/CustomerStatsRepository.java src/test/java/com/apexflow/controller/CustomerControllerTest.java
-git commit -m "feat(customer): add service layer, pagination, stats embed and X-Total-Count header"
+git commit -m "feat(customer): implement CustomerService with constructor injection, readOnly transactions, and 201 Created"
 ```
 
 ---
 
-### Task 5: Order Service & Stats Endpoints (`/stats/revenue`, `/stats/monthly-revenue`)
+### Task 5: Order Service & Stats Endpoints (Constructor Injection, Atomic Transactions)
 
 **Files:**
 - Create: `src/main/java/com/apexflow/service/OrderService.java`
 - Modify: `src/main/java/com/apexflow/controller/OrderController.java`
 - Create: `src/test/java/com/apexflow/controller/OrderControllerTest.java`
-
-**Interfaces:**
-- Consumes: `OrderRepository`, `CustomerRepository`, `CustomerStatsRepository`, `ProductRepository`
-- Produces: `POST /api/orders` with atomic customer subscription & stats update; `GET /api/orders/stats/revenue`; `GET /api/orders/stats/monthly-revenue`.
 
 - [ ] **Step 1: Write integration test for Order creation business logic and stats**
 
@@ -764,8 +808,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -812,7 +855,7 @@ public class OrderControllerTest {
     }
 
     @Test
-    void testCreateOrderExtendsSubscriptionAndUpdatesStats() throws Exception {
+    void testCreateOrderReturns201ExtendsSubscriptionAndUpdatesStats() throws Exception {
         Order order = new Order();
         order.setId("ORD-TEST-1");
         order.setCustomerId("CUST-100");
@@ -830,7 +873,8 @@ public class OrderControllerTest {
         mockMvc.perform(post("/api/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(order)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("ORD-TEST-1"));
 
         Customer updatedCustomer = customerRepository.findById("CUST-100").orElseThrow();
         assertThat(updatedCustomer.getStatus()).isEqualTo("Attivo");
@@ -857,7 +901,7 @@ public class OrderControllerTest {
 
         mockMvc.perform(get("/api/orders/stats/monthly-revenue?year=2026"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[2]").value(250.0)); // Month 2 is March (0-indexed)
+                .andExpect(jsonPath("$[2]").value(250.0));
     }
 }
 ```
@@ -867,7 +911,7 @@ public class OrderControllerTest {
 Run: `./mvnw test -Dtest=OrderControllerTest`
 Expected: FAIL
 
-- [ ] **Step 3: Create `OrderService.java` and update `OrderController.java`**
+- [ ] **Step 3: Create `OrderService.java` and update `OrderController.java` using Constructor Injection and Granular Transactions**
 
 Create `src/main/java/com/apexflow/service/OrderService.java`:
 ```java
@@ -876,7 +920,6 @@ package com.apexflow.service;
 import com.apexflow.model.*;
 import com.apexflow.repository.*;
 import com.apexflow.util.QueryFilterParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -888,20 +931,23 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class OrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
+    private final OrderRepository orderRepository;
+    private final CustomerRepository customerRepository;
+    private final CustomerStatsRepository customerStatsRepository;
+    private final ProductRepository productRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
-
-    @Autowired
-    private CustomerStatsRepository customerStatsRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
+    public OrderService(OrderRepository orderRepository,
+                        CustomerRepository customerRepository,
+                        CustomerStatsRepository customerStatsRepository,
+                        ProductRepository productRepository) {
+        this.orderRepository = orderRepository;
+        this.customerRepository = customerRepository;
+        this.customerStatsRepository = customerStatsRepository;
+        this.productRepository = productRepository;
+    }
 
     public Page<Order> getOrders(Map<String, String> params) {
         Pageable pageable = QueryFilterParser.getPageable(params);
@@ -926,6 +972,7 @@ public class OrderService {
         return orderRepository.findById(id);
     }
 
+    @Transactional
     public Order createOrder(Order order) {
         if (order.getId() == null || order.getId().isBlank()) {
             order.setId("ORD-" + (int) (Math.random() * 9000 + 1000));
@@ -942,7 +989,6 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // Business Logic: Handle subscription extension and stats update
         if (order.getCustomerId() != null) {
             customerRepository.findById(order.getCustomerId()).ifPresent(customer -> {
                 boolean hasSubscription = false;
@@ -977,7 +1023,6 @@ public class OrderService {
                     customerRepository.save(customer);
                 }
 
-                // Update CustomerStats
                 List<CustomerStats> statsList = customerStatsRepository.findByCustomerId(customer.getId());
                 CustomerStats stats;
                 if (statsList != null && !statsList.isEmpty()) {
@@ -1001,6 +1046,7 @@ public class OrderService {
         return savedOrder;
     }
 
+    @Transactional
     public boolean deleteOrder(String id) {
         if (orderRepository.existsById(id)) {
             orderRepository.deleteById(id);
@@ -1022,7 +1068,7 @@ public class OrderService {
 
         for (Order o : orderRepository.findAll()) {
             if ("Pagato".equalsIgnoreCase(o.getStatus()) && o.getDate() != null && o.getDate().getYear() == year) {
-                int month = o.getDate().getMonthValue() - 1; // 0 to 11
+                int month = o.getDate().getMonthValue() - 1;
                 monthly[month] += (o.getTotal() != null ? o.getTotal() : 0.0);
             }
         }
@@ -1037,9 +1083,9 @@ package com.apexflow.controller;
 
 import com.apexflow.model.Order;
 import com.apexflow.service.OrderService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -1050,8 +1096,11 @@ import java.util.Map;
 @RequestMapping("/api/orders")
 public class OrderController {
 
-    @Autowired
-    private OrderService orderService;
+    private final OrderService orderService;
+
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     @GetMapping
     public ResponseEntity<List<Order>> getOrders(@RequestParam Map<String, String> allParams) {
@@ -1070,7 +1119,8 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        return ResponseEntity.ok(orderService.createOrder(order));
+        Order created = orderService.createOrder(order);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @DeleteMapping("/{id}")
@@ -1104,19 +1154,19 @@ Expected: PASS
 
 ```bash
 git add src/main/java/com/apexflow/service/OrderService.java src/main/java/com/apexflow/controller/OrderController.java src/test/java/com/apexflow/controller/OrderControllerTest.java
-git commit -m "feat(order): implement order creation with subscription logic and revenue stats"
+git commit -m "feat(order): implement OrderService with constructor injection, 201 Created and revenue stats"
 ```
 
 ---
 
-### Task 6: Product Service & Controller (Pagination, Soft-Delete)
+### Task 6: Product Service & Controller (Constructor Injection, 201 Created, 204 No Content)
 
 **Files:**
 - Create: `src/main/java/com/apexflow/service/ProductService.java`
 - Modify: `src/main/java/com/apexflow/controller/ProductController.java`
 - Create: `src/test/java/com/apexflow/controller/ProductControllerTest.java`
 
-- [ ] **Step 1: Write integration test for Product pagination and X-Total-Count**
+- [ ] **Step 1: Write integration test for Product pagination and 201 Created**
 
 Create `src/test/java/com/apexflow/controller/ProductControllerTest.java`:
 ```java
@@ -1129,9 +1179,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -1161,15 +1212,24 @@ public class ProductControllerTest {
                 .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$[0].name").value("Cloud DB"));
     }
+
+    @Test
+    void testCreateProductReturns201() throws Exception {
+        mockMvc.perform(post("/api/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"AI Analytics\",\"price\":500.0,\"duration\":\"Mensile\",\"status\":\"Attivo\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("AI Analytics"));
+    }
 }
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=ProductControllerTest`
-Expected: FAIL (missing header)
+Expected: FAIL
 
-- [ ] **Step 3: Create `ProductService.java` and update `ProductController.java`**
+- [ ] **Step 3: Create `ProductService.java` and update `ProductController.java` with Constructor Injection**
 
 Create `src/main/java/com/apexflow/service/ProductService.java`:
 ```java
@@ -1178,7 +1238,6 @@ package com.apexflow.service;
 import com.apexflow.model.Product;
 import com.apexflow.repository.ProductRepository;
 import com.apexflow.util.QueryFilterParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -1190,11 +1249,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+
+    public ProductService(ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
 
     public Page<Product> getProducts(Map<String, String> params) {
         Pageable pageable = QueryFilterParser.getPageable(params);
@@ -1206,6 +1268,7 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
+    @Transactional
     public Product createProduct(Product product) {
         if (product.getId() == null || product.getId().isBlank()) {
             product.setId("PROD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
@@ -1213,6 +1276,7 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    @Transactional
     public Optional<Product> updateProduct(String id, Product details) {
         return productRepository.findById(id).map(p -> {
             if (details.getName() != null) p.setName(details.getName());
@@ -1225,6 +1289,7 @@ public class ProductService {
         });
     }
 
+    @Transactional
     public boolean deleteProduct(String id) {
         if (productRepository.existsById(id)) {
             productRepository.deleteById(id);
@@ -1241,9 +1306,9 @@ package com.apexflow.controller;
 
 import com.apexflow.model.Product;
 import com.apexflow.service.ProductService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -1254,8 +1319,11 @@ import java.util.Map;
 @RequestMapping("/api/products")
 public class ProductController {
 
-    @Autowired
-    private ProductService productService;
+    private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
     @GetMapping
     public ResponseEntity<List<Product>> getProducts(@RequestParam Map<String, String> allParams) {
@@ -1274,7 +1342,8 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-        return ResponseEntity.ok(productService.createProduct(product));
+        Product created = productService.createProduct(product);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PatchMapping("/{id}")
@@ -1302,12 +1371,12 @@ Expected: PASS
 
 ```bash
 git add src/main/java/com/apexflow/service/ProductService.java src/main/java/com/apexflow/controller/ProductController.java src/test/java/com/apexflow/controller/ProductControllerTest.java
-git commit -m "feat(product): implement ProductService with pagination and X-Total-Count header"
+git commit -m "feat(product): implement ProductService with constructor injection and REST status codes"
 ```
 
 ---
 
-### Task 7: User Service & Controller (Full CRUD, Login Compatibility)
+### Task 7: User Service & Controller (Constructor Injection, 201 Created, 204 No Content)
 
 **Files:**
 - Create: `src/main/java/com/apexflow/service/UserService.java`
@@ -1327,9 +1396,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -1360,6 +1430,15 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$[0].email").value("admin@demo.com"))
                 .andExpect(header().string("X-Total-Count", "1"));
     }
+
+    @Test
+    void testCreateUserReturns201() throws Exception {
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"new@user.com\",\"password\":\"pwd\",\"name\":\"New User\",\"role\":\"user\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("new@user.com"));
+    }
 }
 ```
 
@@ -1368,7 +1447,7 @@ public class UserControllerTest {
 Run: `./mvnw test -Dtest=UserControllerTest`
 Expected: FAIL
 
-- [ ] **Step 3: Create `UserService.java` and update `UserController.java`**
+- [ ] **Step 3: Create `UserService.java` and update `UserController.java` with Constructor Injection**
 
 Create `src/main/java/com/apexflow/service/UserService.java`:
 ```java
@@ -1377,7 +1456,6 @@ package com.apexflow.service;
 import com.apexflow.model.User;
 import com.apexflow.repository.UserRepository;
 import com.apexflow.util.QueryFilterParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -1388,11 +1466,14 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     public Page<User> getUsers(Map<String, String> params) {
         Pageable pageable = QueryFilterParser.getPageable(params);
@@ -1404,10 +1485,12 @@ public class UserService {
         return userRepository.findById(id);
     }
 
+    @Transactional
     public User createUser(User user) {
         return userRepository.save(user);
     }
 
+    @Transactional
     public Optional<User> updateUser(Long id, User details) {
         return userRepository.findById(id).map(u -> {
             if (details.getName() != null) u.setName(details.getName());
@@ -1419,6 +1502,7 @@ public class UserService {
         });
     }
 
+    @Transactional
     public boolean deleteUser(Long id) {
         if (userRepository.existsById(id)) {
             userRepository.deleteById(id);
@@ -1435,9 +1519,9 @@ package com.apexflow.controller;
 
 import com.apexflow.model.User;
 import com.apexflow.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -1448,8 +1532,11 @@ import java.util.Map;
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping
     public ResponseEntity<List<User>> getUsers(@RequestParam Map<String, String> allParams) {
@@ -1468,7 +1555,8 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<User> createUser(@RequestBody User user) {
-        return ResponseEntity.ok(userService.createUser(user));
+        User created = userService.createUser(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PatchMapping("/{id}")
@@ -1496,7 +1584,7 @@ Expected: PASS
 
 ```bash
 git add src/main/java/com/apexflow/service/UserService.java src/main/java/com/apexflow/controller/UserController.java src/test/java/com/apexflow/controller/UserControllerTest.java
-git commit -m "feat(user): add UserService, full CRUD and query support for login compatibility"
+git commit -m "feat(user): implement UserService with constructor injection, 201 Created and full CRUD"
 ```
 
 ---
@@ -1556,12 +1644,12 @@ public class CustomerStatsControllerTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails or needs updates**
+- [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=CustomerStatsControllerTest`
-Expected: FAIL (controller currently does not filter by parameters)
+Expected: FAIL
 
-- [ ] **Step 3: Create `CustomerStatsService.java` and update `CustomerStatsController.java`**
+- [ ] **Step 3: Create `CustomerStatsService.java` and update `CustomerStatsController.java` with Constructor Injection**
 
 Create `src/main/java/com/apexflow/service/CustomerStatsService.java`:
 ```java
@@ -1570,7 +1658,6 @@ package com.apexflow.service;
 import com.apexflow.model.CustomerStats;
 import com.apexflow.repository.CustomerStatsRepository;
 import com.apexflow.util.QueryFilterParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -1581,11 +1668,14 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class CustomerStatsService {
 
-    @Autowired
-    private CustomerStatsRepository statsRepository;
+    private final CustomerStatsRepository statsRepository;
+
+    public CustomerStatsService(CustomerStatsRepository statsRepository) {
+        this.statsRepository = statsRepository;
+    }
 
     public Page<CustomerStats> getStats(Map<String, String> params) {
         Pageable pageable = QueryFilterParser.getPageable(params);
@@ -1597,10 +1687,12 @@ public class CustomerStatsService {
         return statsRepository.findById(id);
     }
 
+    @Transactional
     public CustomerStats saveStats(CustomerStats stats) {
         return statsRepository.save(stats);
     }
 
+    @Transactional
     public Optional<CustomerStats> updateStats(String id, CustomerStats details) {
         return statsRepository.findById(id).map(s -> {
             if (details.getTotalRevenue() != null) s.setTotalRevenue(details.getTotalRevenue());
@@ -1618,9 +1710,9 @@ package com.apexflow.controller;
 
 import com.apexflow.model.CustomerStats;
 import com.apexflow.service.CustomerStatsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -1631,8 +1723,11 @@ import java.util.Map;
 @RequestMapping("/api/customerStats")
 public class CustomerStatsController {
 
-    @Autowired
-    private CustomerStatsService statsService;
+    private final CustomerStatsService statsService;
+
+    public CustomerStatsController(CustomerStatsService statsService) {
+        this.statsService = statsService;
+    }
 
     @GetMapping
     public ResponseEntity<List<CustomerStats>> getAllCustomerStats(@RequestParam Map<String, String> allParams) {
@@ -1651,7 +1746,8 @@ public class CustomerStatsController {
 
     @PostMapping
     public ResponseEntity<CustomerStats> createStats(@RequestBody CustomerStats stats) {
-        return ResponseEntity.ok(statsService.saveStats(stats));
+        CustomerStats saved = statsService.saveStats(stats);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PatchMapping("/{id}")
@@ -1672,7 +1768,7 @@ Expected: PASS
 
 ```bash
 git add src/main/java/com/apexflow/service/CustomerStatsService.java src/main/java/com/apexflow/controller/CustomerStatsController.java src/test/java/com/apexflow/controller/CustomerStatsControllerTest.java
-git commit -m "feat(stats): add CustomerStatsService with filtering and pagination"
+git commit -m "feat(stats): implement CustomerStatsService with constructor injection and 201 Created"
 ```
 
 ---
@@ -1729,9 +1825,9 @@ public class SubscriptionSchedulerTest {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./mvnw test -Dtest=SubscriptionSchedulerTest`
-Expected: FAIL (`SubscriptionScheduler` does not exist)
+Expected: FAIL
 
-- [ ] **Step 3: Implement `SubscriptionScheduler.java` and add `@EnableScheduling` to `ApexFlowApplication.java`**
+- [ ] **Step 3: Implement `SubscriptionScheduler.java` with Constructor Injection, SLF4J, and `@EnableScheduling`**
 
 Create `src/main/java/com/apexflow/scheduler/SubscriptionScheduler.java`:
 ```java
@@ -1741,7 +1837,6 @@ import com.apexflow.model.Customer;
 import com.apexflow.repository.CustomerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -1756,16 +1851,19 @@ public class SubscriptionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(SubscriptionScheduler.class);
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
+
+    public SubscriptionScheduler(CustomerRepository customerRepository) {
+        this.customerRepository = customerRepository;
+    }
 
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
-        log.info("Running subscription expiration check on application startup...");
+        log.info("subscription_scheduler_startup_check running...");
         updateExpiredSubscriptions();
     }
 
-    @Scheduled(cron = "0 0 1 * * ?") // Runs daily at 01:00 AM
+    @Scheduled(cron = "0 0 1 * * ?")
     @Transactional
     public void updateExpiredSubscriptions() {
         LocalDate today = LocalDate.now();
@@ -1778,14 +1876,14 @@ public class SubscriptionScheduler {
         );
 
         if (!activeCustomers.isEmpty()) {
-            log.info("Found {} customer(s) with expired subscriptions. Updating status to 'Scaduto'...", activeCustomers.size());
+            log.info("updating_expired_subscriptions count={}", activeCustomers.size());
             for (Customer customer : activeCustomers) {
                 customer.setStatus("Scaduto");
                 customerRepository.save(customer);
             }
-            log.info("Expired subscriptions update complete.");
+            log.info("expired_subscriptions_updated count={}", activeCustomers.size());
         } else {
-            log.info("No expired subscriptions found.");
+            log.info("no_expired_subscriptions_found");
         }
     }
 }
@@ -1819,12 +1917,12 @@ Expected: PASS
 
 ```bash
 git add src/main/java/com/apexflow/scheduler/SubscriptionScheduler.java src/main/java/com/apexflow/ApexFlowApplication.java src/test/java/com/apexflow/scheduler/SubscriptionSchedulerTest.java
-git commit -m "feat(scheduler): implement daily and startup subscription expiration job"
+git commit -m "feat(scheduler): implement subscription expiration scheduler with constructor injection and SLF4J"
 ```
 
 ---
 
-### Task 10: Automatic Seeding from `db.json`
+### Task 10: Automatic Seeding from `db.json` (SLF4J, Constructor Injection)
 
 **Files:**
 - Create: `src/main/resources/data/seed-db.json` (mirrored from `dashboard-tesi/db.json`)
@@ -1835,15 +1933,15 @@ git commit -m "feat(scheduler): implement daily and startup subscription expirat
 
 Copy `/Users/emanueledelmonte/Documents/Università/Tesi/dashboard-tesi/db.json` to `/Users/emanueledelmonte/Documents/Università/Tesi/backend-tesi/src/main/resources/data/seed-db.json`.
 
-- [ ] **Step 2: Update `DataInitializer.java` to load `seed-db.json` if tables are empty**
+- [ ] **Step 2: Update `DataInitializer.java` with Constructor Injection and SLF4J**
 
-Modify `src/main/java/com/apexflow/config/DataInitializer.java`:
-Use Jackson `ObjectMapper` to parse `seed-db.json`, inserting `users`, `products`, `customers`, `orders` (with `items` set to each `order`), and `customerStats`.
+Modify `src/main/java/com/apexflow/config/DataInitializer.java` to use constructor injection and `LoggerFactory.getLogger(DataInitializer.class)`:
+Read `seed-db.json` via Jackson ObjectMapper and insert customers, products, orders, items, users, and customerStats if repositories are empty.
 
 - [ ] **Step 3: Write test to verify database gets populated from `seed-db.json`**
 
 Create `src/test/java/com/apexflow/config/DataInitializerTest.java`:
-Verify that `customerRepository.count() >= 8`, `productRepository.count() >= 8`, `orderRepository.count() >= 7`, and `userRepository.count() >= 2`.
+Verify `customerRepository.count() >= 8`, `productRepository.count() >= 8`, `orderRepository.count() >= 7`, and `userRepository.count() >= 2`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1854,7 +1952,7 @@ Expected: PASS
 
 ```bash
 git add src/main/resources/data/seed-db.json src/main/java/com/apexflow/config/DataInitializer.java src/test/java/com/apexflow/config/DataInitializerTest.java
-git commit -m "feat(data): seed complete dataset from seed-db.json on startup"
+git commit -m "feat(data): seed complete dataset from seed-db.json using SLF4J and constructor injection"
 ```
 
 ---
@@ -1863,24 +1961,77 @@ git commit -m "feat(data): seed complete dataset from seed-db.json on startup"
 
 **Files:**
 - Create: `src/main/java/com/apexflow/exception/GlobalExceptionHandler.java`
+- Create: `src/main/java/com/apexflow/exception/ApiError.java`
 - Modify: `README.md`
 
-- [ ] **Step 1: Create GlobalExceptionHandler**
+- [ ] **Step 1: Create GlobalExceptionHandler and ApiError record**
 
-Create `src/main/java/com/apexflow/exception/GlobalExceptionHandler.java` to return clean JSON errors for 400, 404, 500.
+Create `src/main/java/com/apexflow/exception/ApiError.java`:
+```java
+package com.apexflow.exception;
+
+import java.time.Instant;
+
+public record ApiError(int status, String error, String message, Instant timestamp) {
+    public static ApiError of(int status, String error, String message) {
+        return new ApiError(status, error, message, Instant.now());
+    }
+}
+```
+
+Create `src/main/java/com/apexflow/exception/GlobalExceptionHandler.java`:
+```java
+package com.apexflow.exception;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        return ResponseEntity.badRequest().body(ApiError.of(HttpStatus.BAD_REQUEST.value(), "Validation Error", message));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(ApiError.of(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleGeneric(Exception ex) {
+        log.error("unexpected_error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiError.of(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error", "Si è verificato un errore inatteso"));
+    }
+}
+```
 
 - [ ] **Step 2: Run full test suite**
 
 Run: `./mvnw clean test`
 Expected: ALL TESTS PASS
 
-- [ ] **Step 3: Update `README.md` with complete API docs and run instructions**
+- [ ] **Step 3: Update `README.md` with complete API documentation and architectural patterns**
 
-Document all endpoints, query parameters (`_page`, `_limit`, `_sort`, `_order`, `_like`), CORS exposure, and how to run Angular with `npm run start:springboot`.
+Document all endpoints, query parameters (`_page`, `_limit`, `_sort`, `_order`, `_like`), CORS exposure, problem details, and how to run Angular with `npm run start:springboot`.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/main/java/com/apexflow/exception/GlobalExceptionHandler.java README.md
-git commit -m "docs: update README with API docs and add GlobalExceptionHandler"
+git add src/main/java/com/apexflow/exception/*.java README.md
+git commit -m "docs: update README with API docs and add RFC 7807 compatible GlobalExceptionHandler"
 ```
