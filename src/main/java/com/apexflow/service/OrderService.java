@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -48,11 +49,23 @@ public class OrderService {
             spec = spec.and(customerSpec);
         }
 
-        return orderRepository.findAll(spec, pageable);
+        Page<Order> page = orderRepository.findAll(spec, pageable);
+
+        if (params != null && isExpandCustomer(params.get("_expand"))) {
+            expandCustomer(page.getContent());
+        }
+
+        return page;
     }
 
     public Optional<Order> getOrderById(String id) {
-        return orderRepository.findById(id);
+        Optional<Order> orderOpt = orderRepository.findById(id);
+        orderOpt.ifPresent(order -> {
+            if (order.getCustomerId() != null) {
+                customerRepository.findById(order.getCustomerId()).ifPresent(order::setCustomer);
+            }
+        });
+        return orderOpt;
     }
 
     @Transactional
@@ -124,9 +137,39 @@ public class OrderService {
                 stats.setLastOrderDate(order.getDate());
                 customerStatsRepository.save(stats);
             });
+            customerRepository.findById(order.getCustomerId()).ifPresent(savedOrder::setCustomer);
         }
 
         return savedOrder;
+    }
+
+    private void expandCustomer(List<Order> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return;
+        }
+        Set<String> customerIds = orders.stream()
+                .map(Order::getCustomerId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (customerIds.isEmpty()) {
+            return;
+        }
+
+        Map<String, Customer> customerMap = customerRepository.findAllById(customerIds).stream()
+                .collect(Collectors.toMap(Customer::getId, c -> c));
+
+        for (Order order : orders) {
+            if (order.getCustomerId() != null) {
+                order.setCustomer(customerMap.get(order.getCustomerId()));
+            }
+        }
+    }
+
+    private boolean isExpandCustomer(String expand) {
+        if (expand == null) {
+            return false;
+        }
+        return Arrays.asList(expand.split(",")).contains("customer");
     }
 
     @Transactional

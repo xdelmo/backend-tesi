@@ -205,9 +205,28 @@ public class OrderControllerTest {
     }
 
     @Test
+    void testGetOrdersWithExpandCustomer() throws Exception {
+        Order o = new Order();
+        o.setId("O-EXPAND-1");
+        o.setCustomerId("CUST-100");
+        o.setStatus("Pagato");
+        o.setTotal(150.0);
+        o.setDate(LocalDateTime.now());
+        orderRepository.save(o);
+
+        mockMvc.perform(get("/api/orders?_expand=customer"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "1"))
+                .andExpect(jsonPath("$[0].id").value("O-EXPAND-1"))
+                .andExpect(jsonPath("$[0].customer.id").value("CUST-100"))
+                .andExpect(jsonPath("$[0].customer.name").value("Mario Rossi"));
+    }
+
+    @Test
     void testGetOrderById_SuccessAndNotFound() throws Exception {
         Order o = new Order();
         o.setId("O-FIND-1");
+        o.setCustomerId("CUST-100");
         o.setStatus("Pagato");
         o.setTotal(300.0);
         o.setDate(LocalDateTime.now());
@@ -216,7 +235,8 @@ public class OrderControllerTest {
         mockMvc.perform(get("/api/orders/O-FIND-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("O-FIND-1"))
-                .andExpect(jsonPath("$.total").value(300.0));
+                .andExpect(jsonPath("$.total").value(300.0))
+                .andExpect(jsonPath("$.customer.name").value("Mario Rossi"));
 
         mockMvc.perform(get("/api/orders/UNKNOWN"))
                 .andExpect(status().isNotFound());

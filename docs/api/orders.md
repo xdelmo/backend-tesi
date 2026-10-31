@@ -16,6 +16,7 @@ Restituisce l'elenco paginato e filtrato degli ordini.
 | `_limit` | Query | `Integer` | No | `10` | Numero massimo di record per pagina |
 | `_sort` | Query | `String` | No | - | Campo di ordinamento (es. `date`, `total`) |
 | `_order` | Query | `String` | No | `asc` | Direzione di ordinamento (`asc` o `desc`) |
+| `_expand` | Query | `String` | No | - | Espande la risorsa genitore associata (es. `customer` popola l'oggetto completo del cliente) |
 | `customer.name_like` | Query | `String` | No | - | Filtro parziale sul nome del cliente collegato all'ordine |
 | `status` | Query | `String` | No | - | Stato ordine (`Pagato`, `In Attesa`, `Fallito`) |
 | `type` | Query | `String` | No | - | Tipologia (`Abbonamento`, `Una Tantum`) |
@@ -25,7 +26,7 @@ Restituisce l'elenco paginato e filtrato degli ordini.
 - `X-Total-Count: <total_elements>`
 - `Access-Control-Expose-Headers: X-Total-Count, Authorization`
 
-### Risposta `200 OK`
+### Risposta `200 OK` (con `_expand=customer`)
 ```json
 [
   {
@@ -38,6 +39,15 @@ Restituisce l'elenco paginato e filtrato degli ordini.
     "tax": 49.5,
     "discountAmount": 50.0,
     "total": 499.5,
+    "customer": {
+      "id": "I9j0K1l2M3n4O5p6",
+      "name": "Luca Bianchi",
+      "email": "l.bianchi@consulting.it",
+      "company": "Bianchi Consulting",
+      "status": "Attivo",
+      "industry": "Professional Services",
+      "plan": "Enterprise"
+    },
     "items": [
       {
         "id": 1,
