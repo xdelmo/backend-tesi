@@ -34,7 +34,15 @@ Qualunque sia la dimensione della pagina, le query sono due.
 - **`@ManyToOne` su `Order.customer`**: cambierebbe la forma del JSON e lo schema rispetto a `db.json`, che il frontend si aspetta con `customerId` piatto.
 - **`JOIN FETCH`**: richiede la relazione JPA, quindi lo stesso problema.
 
-## Dove non è ancora applicata
+## Stesso schema sui clienti
 
-!!! note "Clienti con `_embed=customerStats`"
-    `CustomerService.embedStats` carica le statistiche con `findByCustomerId` per ogni cliente della pagina: è ancora un N+1. La correzione è la stessa: raccogliere gli ID e usare una sola query (`findByCustomerIdIn`).
+`GET /api/customers?_embed=customerStats` (e `_sort=customerStats.totalRevenue`) carica le statistiche della pagina con una sola `findByCustomerIdIn` e le raggruppa per cliente:
+
+```java
+// src/main/java/com/apexflow/service/CustomerService.java — embedStats
+List<String> ids = customers.stream().map(Customer::getId).toList();
+Map<String, List<CustomerStats>> statsByCustomer = new HashMap<>();
+for (CustomerStats s : customerStatsRepository.findByCustomerIdIn(ids)) {
+    statsByCustomer.computeIfAbsent(s.getCustomerId(), k -> new ArrayList<>()).add(s);
+}
+```
