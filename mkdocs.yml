@@ -1,0 +1,93 @@
+site_url: https://xdelmo.github.io/backend-tesi/
+site_name: ApexFlow Backend - Architettura & Engineering
+site_description: Case study tecnico e documentazione per sviluppatori del backend Spring Boot di ApexFlow
+theme:
+  name: material
+  language: it
+  logo: assets/images/logo-mark.png
+  favicon: assets/images/favicon.ico
+  font:
+    text: Poppins
+    code: JetBrains Mono
+  palette:
+    # Segue la preferenza di sistema, con toggle manuale chiaro/scuro
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Passa al tema chiaro
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Passa al tema scuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Segui il tema di sistema
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+extra_css:
+  - stylesheets/extra.css
+exclude_docs: |
+  superpowers/
+  agents/
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+nav:
+  - 🚀 Executive Summary: index.md
+  - 🏗️ Architettura di Sistema: architecture.md
+  - 🧠 Deep Dives (Decisioni Tecniche):
+      - Filtri dinamici & paginazione: architecture/query-pagination-filters.md
+      - Ciclo di vita degli abbonamenti: architecture/subscription-lifecycle.md
+      - Espansione senza N+1: deep-dives/expand-n-plus-one.md
+      - Gestione errori (RFC 7807): deep-dives/error-handling.md
+      - Modelli dati: architecture/data-models.md
+      - Seeding idempotente: architecture/data-seeding.md
+  - 📡 API Reference:
+      - Clienti: api/customers.md
+      - Ordini: api/orders.md
+      - Prodotti: api/products.md
+      - Utenti: api/users.md
+      - Statistiche clienti: api/customer-stats.md
+  - 💻 Developer Guide:
+      - Setup & Test: dev-guide/setup.md
+      - Deploy & CI/CD: dev-guide/ci-cd.md
+
+repo_url: https://github.com/xdelmo/backend-tesi
+repo_name: xdelmo/backend-tesi
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/xdelmo
+      name: GitHub Profile

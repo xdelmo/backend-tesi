@@ -70,6 +70,10 @@ Layered architecture under `com.apexflow`:
 Deploy su Render.com tramite `Dockerfile` (multi-stage, Eclipse Temurin 21) ad ogni push su `main`.
 URL: https://backend-tesi.onrender.com/
 
+## Docs
+
+- **Docs**: new features/commands/behavior changes must update README.md and the MkDocs site in docs/ (register new pages in mkdocs.yml). Build check: `uvx --with mkdocs-material mkdocs build --strict`. Deployed to GitHub Pages by `.github/workflows/docs.yml`.
+
 ## Agent skills
 
 ### Issue tracker
