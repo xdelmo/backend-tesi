@@ -5,10 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
 public interface CustomerStatsRepository extends JpaRepository<CustomerStats, String>, JpaSpecificationExecutor<CustomerStats> {
     List<CustomerStats> findByCustomerId(String customerId);
+
+    List<CustomerStats> findByCustomerIdIn(Collection<String> customerIds);
 }
 

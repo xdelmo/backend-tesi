@@ -61,9 +61,16 @@ public class CustomerService {
     }
 
     private void embedStats(List<Customer> customers) {
+        if (customers.isEmpty()) {
+            return;
+        }
+        List<String> ids = customers.stream().map(Customer::getId).toList();
+        Map<String, List<CustomerStats>> statsByCustomer = new HashMap<>();
+        for (CustomerStats s : customerStatsRepository.findByCustomerIdIn(ids)) {
+            statsByCustomer.computeIfAbsent(s.getCustomerId(), k -> new ArrayList<>()).add(s);
+        }
         for (Customer c : customers) {
-            List<CustomerStats> stats = customerStatsRepository.findByCustomerId(c.getId());
-            c.setCustomerStats(stats != null ? stats : List.of());
+            c.setCustomerStats(statsByCustomer.getOrDefault(c.getId(), List.of()));
         }
     }
 
