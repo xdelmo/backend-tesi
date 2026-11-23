@@ -234,16 +234,16 @@ L'applicazione adotta una gestione centralizzata e controllata delle eccezioni t
 Per garantire l'allineamento automatico degli abbonamenti SaaS:
 - È configurato il componente `@Scheduled` `SubscriptionScheduler` attivo con espressione cron:
   ```cron
-  0 0 2 * * ?
+  0 0 1 * * ?
   ```
-- **Frequenza**: Ogni notte alle ore **02:00**.
-- **Logica**: Interroga il database per identificare tutti i clienti con stato `"Attivo"` e `subscriptionEndDate` antecedente alla data odierna (`LocalDate.now()`). Imposta atomicamente il loro stato a `"Inattivo"` registrando le variazioni con SLF4J.
+- **Frequenza**: Ogni notte alle ore **01:00**, più un controllo all'avvio dell'applicazione (`ApplicationReadyEvent`).
+- **Logica**: Interroga il database per identificare tutti i clienti con stato `"Attivo"` e `subscriptionEndDate` antecedente alla data odierna (`LocalDate.now()`). Imposta atomicamente il loro stato a `"Scaduto"` registrando le variazioni con SLF4J.
 
 ---
 
 ## 🛡️ Sicurezza, CORS e Middleware
 
-- **CORS Globale**: Configurato in `SecurityConfig` per autorizzare le chiamate dal frontend Angular (`http://localhost:4200`), abilitando i metodi HTTP `GET, POST, PUT, PATCH, DELETE, OPTIONS`.
+- **CORS Globale**: Configurato in `SecurityConfig` per accettare chiamate da qualsiasi origine (`allowedOriginPatterns: *`), incluso il frontend Angular, abilitando i metodi HTTP `GET, POST, PUT, PATCH, DELETE, OPTIONS`.
 - **Exposed Headers**: `X-Total-Count` e `Authorization` sono espressamente esposti per consentire la lettura del conteggio totale dei record e la corretta visualizzazione della paginazione lato PrimeNG.
 - **RequestLoggingFilter**: Filtro HTTP (`OncePerRequestFilter`) che registra tramite log strutturato SLF4J la metrica di latenza (`durationMs`), il metodo HTTP, l'URI e il codice HTTP di risposta per ogni singola invocazione.
 - **Protezione CSRF**: Disabilitata per endpoint stateless compatibili con comunicazioni REST standard.
@@ -260,6 +260,12 @@ All'avvio dell'applicazione, `DataInitializer` popola in modo idempotente il dat
 - **Ordini (`orders` & `order_items`)**: 7 ordini con integrità referenziale bidirezionale `OrderItem -> Order` preservata.
 - **Idempotenza & Logging**: Esegue verifiche preventive del conteggio record su ciascun repository (`repo.count() == 0`) per evitare duplicazioni e registra i passi salienti tramite SLF4J (`LoggerFactory.getLogger(DataInitializer.class)`).
 - **Iniezione**: Adotta la Constructor Injection pura su tutti i repository e sull'`ObjectMapper`.
+
+---
+
+## 📚 Documentazione
+
+Case study tecnico e guida per sviluppatori (MkDocs Material) in `docs/`, pubblicati su GitHub Pages: https://xdelmo.github.io/backend-tesi/
 
 ---
 

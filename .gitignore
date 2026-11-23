@@ -35,3 +35,4 @@ build/
 
 # serena (MCP rimosso)
 .serena/
+site/
