@@ -69,3 +69,13 @@ Layered architecture under `com.apexflow`:
 
 Deploy su Render.com tramite `Dockerfile` (multi-stage, Eclipse Temurin 21) ad ogni push su `main`.
 URL: https://backend-tesi.onrender.com/
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues of `xdelmo/backend-tesi` (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
